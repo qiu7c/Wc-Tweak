@@ -52,18 +52,6 @@ static CGFloat dpiScale(void) {
     return (v >= 0.5 && v <= 1.0) ? v : 1.0;
 }
 
-static void applyDPI(void) {
-    CGFloat s = dpiScale();
-    UIWindow *kw = nil;
-    for (UIWindowScene *sc in [UIApplication sharedApplication].connectedScenes) {
-        if (sc.activationState == UISceneActivationStateForegroundActive) {
-            kw = sc.windows.firstObject; break;
-        }
-    }
-    if (!kw) return;
-    // 只缩放 rootViewController 的内容，不缩放 window 本身（避免黑边）
-    kw.rootViewController.view.transform = (s < 1.0) ? CGAffineTransformMakeScale(s, s) : CGAffineTransformIdentity;
-}
 static NSArray<NSString *> *filterKeywords(void);
 static UIWindow *topWindow(void) {
     for (UIWindowScene *sc in [UIApplication sharedApplication].connectedScenes)
@@ -378,7 +366,6 @@ static UIWindow *topWindow(void) {
             CGFloat vals[] = {1.0, 0.95, 0.90, 0.85, 0.80, 0.75, 0.70};
             [[NSUserDefaults standardUserDefaults] setFloat:vals[idx] forKey:kDPIScaleKey];
             [[NSUserDefaults standardUserDefaults] synchronize];
-            applyDPI();
             [tv reloadRowsAtIndexPaths:@[ip] withRowAnimation:UITableViewRowAnimationNone];
         }];
     }
@@ -464,7 +451,7 @@ static UIWindow *topWindow(void) {
         else {
             c.textLabel.text = @"界面缩放";
             NSInteger pct = (NSInteger)(dpiScale() * 100);
-            c.detailTextLabel.text = [NSString stringWithFormat:@"%ld%% >", (long)pct];
+            c.detailTextLabel.text = [NSString stringWithFormat:@"%ld%%（重启生效）>", (long)pct];
             c.accessoryView = nil;
             c.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
             c.selectionStyle = UITableViewCellSelectionStyleDefault;
@@ -779,15 +766,31 @@ static BOOL shouldFilterMsg(CMessageWrap *wrap) {
 %end
 
 // ============================================================
+// 界面缩放: hook UIScreen 修改逻辑分辨率
+// ============================================================
+
+%hook UIScreen
+- (CGRect)bounds {
+    CGFloat s = dpiScale();
+    if (s >= 1.0) return %orig;
+    CGRect orig = %orig;
+    CGFloat m = 1.0 / s;
+    return CGRectMake(0, 0, orig.size.width * m, orig.size.height * m);
+}
+- (CGRect)nativeBounds {
+    CGFloat s = dpiScale();
+    if (s >= 1.0) return %orig;
+    CGRect orig = %orig;
+    CGFloat m = 1.0 / s;
+    return CGRectMake(0, 0, orig.size.width * m, orig.size.height * m);
+}
+%end
+
+// ============================================================
 // 注册自身
 // ============================================================
 
 %ctor {
-    // DPI 缩放
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        applyDPI();
-    });
-
     Class mgr = NSClassFromString(@"WCPluginsMgr");
     if (mgr) {
         id inst = ((id (*)(id, SEL))objc_msgSend)(mgr, @selector(sharedInstance));
