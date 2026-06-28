@@ -51,9 +51,7 @@ static BOOL pref(NSString *key) {
 
 static NSArray<NSString *> *filterKeywords(void);
 static NSSet<NSString *> *roundEnabledClasses(void);
-static NSSet<NSString *> *roundEnabledClasses(void);
 static NSDictionary<NSString *, NSString *> *roundElements(void);
-static CGFloat roundRadius(void);
 
 static UIWindow *topWindow(void) {
     for (UIWindowScene *sc in [UIApplication sharedApplication].connectedScenes)
