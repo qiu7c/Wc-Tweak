@@ -314,11 +314,13 @@ static UIWindow *topWindow(void) {
 // ---- TableView ----
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 4; }
 
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 4; }
+
 - (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)s {
-    if (s == 0) return 4;  // 聊天增强
-    if (s == 1) return 5;  // 界面
-    if (s == 2) return self.pluginFolded ? 1 : (allPlugins().count+1); // 插件收纳
-    return 4;              // 关于
+    if (s == 0) return 6;  // 聊天增强
+    if (s == 1) return 4;  // 界面
+    if (s == 2) return self.pluginFolded ? 1 : (allPlugins().count + 1);
+    return 3;              // 关于
 }
 
 - (NSString *)tableView:(UITableView *)tv titleForHeaderInSection:(NSInteger)s {
@@ -330,18 +332,15 @@ static UIWindow *topWindow(void) {
 
 - (void)tableView:(UITableView *)tv didSelectRowAtIndexPath:(NSIndexPath *)ip {
     [tv deselectRowAtIndexPath:ip animated:YES];
-    // 圆角设置
-    if (ip.section == 0 && ip.row == 3)
-        [self.navigationController pushViewController:[[WxCraftRoundVC alloc] init] animated:YES];
-    // 消息过滤关键词
-    if (ip.section == 1 && ip.row == 4)
+    if (ip.section == 0 && ip.row == 4) // 消息过滤关键词
         [self.navigationController pushViewController:[[WxCraftKeywordVC alloc] init] animated:YES];
-    // 插件折叠
-    if (ip.section == 2 && ip.row == 0 && self.pluginFolded) {
-        self.pluginFolded = NO; [tv reloadSections:[NSIndexSet indexSetWithIndex:2] withRowAnimation:UITableViewRowAnimationAutomatic];
+    if (ip.section == 0 && ip.row == 5) // 圆角设置
+        [self.navigationController pushViewController:[[WxCraftRoundVC alloc] init] animated:YES];
+    if (ip.section == 2 && ip.row == 0) { // 插件折叠/展开
+        self.pluginFolded = !self.pluginFolded;
+        [tv reloadSections:[NSIndexSet indexSetWithIndex:2] withRowAnimation:UITableViewRowAnimationAutomatic];
     }
-    // 作者跳转
-    if (ip.section == 3 && ip.row == 0) {
+    if (ip.section == 3 && ip.row == 0) { // 作者跳转
         dispatch_async(dispatch_get_main_queue(), ^{
             id svc = [objc_getClass("MMServiceCenter") defaultCenter];
             id cm = ((id(*)(id,SEL,Class))objc_msgSend)(svc, @selector(getService:), objc_getClass("CContactMgr"));
@@ -353,8 +352,7 @@ static UIWindow *topWindow(void) {
             }
         });
     }
-    // 版本秘籍
-    if (ip.section == 3 && ip.row == 3) {
+    if (ip.section == 3 && ip.row == 2) { // 版本秘籍
         self.versionTapCount++;
         if (self.versionTapCount >= 5) { self.versionTapCount = 0;
             dispatch_async(dispatch_get_main_queue(), ^{
@@ -377,80 +375,76 @@ static UIWindow *topWindow(void) {
     UITableViewCell *c = [tv dequeueReusableCellWithIdentifier:@"c"];
     if (!c) {
         c = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:@"c"];
-        c.textLabel.font = [UIFont systemFontOfSize:15];
+        c.textLabel.font = [UIFont systemFontOfSize:16];
         c.detailTextLabel.font = [UIFont systemFontOfSize:12];
         c.detailTextLabel.textColor = [UIColor secondaryLabelColor];
     }
     c.textLabel.text = @""; c.detailTextLabel.text = @"";
     c.accessoryView = nil; c.accessoryType = UITableViewCellAccessoryNone; c.selectionStyle = UITableViewCellSelectionStyleNone;
 
-    // S0: 聊天增强
-    if (ip.section == 0) {
-        if (ip.row == 0) {
-            c.textLabel.text = @"小信号弹窗 (Duang)"; c.detailTextLabel.text = @"恢复召唤弹窗"; c.accessoryView = [self sw:kDuangKey];
-            [(UISwitch *)c.accessoryView addTarget:self action:@selector(toggleDuang:) forControlEvents:UIControlEventValueChanged];
-        } else if (ip.row == 1) {
-            c.textLabel.text = @"游戏作弊"; c.detailTextLabel.text = @"骰子/猜拳自由选择"; c.accessoryView = [self sw:kGameCheatKey];
-            [(UISwitch *)c.accessoryView addTarget:self action:@selector(toggleGCheat:) forControlEvents:UIControlEventValueChanged];
-        } else if (ip.row == 2) {
-            c.textLabel.text = @"输入框手势"; c.detailTextLabel.text = @"左滑清除 · 右滑粘贴"; c.accessoryView = [self sw:kSwipeInput];
-            [(UISwitch *)c.accessoryView addTarget:self action:@selector(toggleSwipe:) forControlEvents:UIControlEventValueChanged];
-        } else {
-            c.textLabel.text = @"圆角设置"; c.detailTextLabel.text = @"定制 UI 圆角";
-            c.accessoryType = UITableViewCellAccessoryDisclosureIndicator; c.selectionStyle = UITableViewCellSelectionStyleDefault;
-        }
-        return c;
-    }
-    // S1: 界面
-    if (ip.section == 1) {
-        if (ip.row == 0) {
-            c.textLabel.text = @"去广告"; c.detailTextLabel.text = @"朋友圈/文章/小程序"; c.accessoryView = [self sw:kAdBlockKey];
-            [(UISwitch *)c.accessoryView addTarget:self action:@selector(toggleAd:) forControlEvents:UIControlEventValueChanged];
-        } else if (ip.row == 1) {
-            c.textLabel.text = @"去除分割线"; c.detailTextLabel.text = @"全局隐藏列表分割线"; c.accessoryView = [self sw:kNoSeparator];
-            [(UISwitch *)c.accessoryView addTarget:self action:@selector(toggleSep:) forControlEvents:UIControlEventValueChanged];
-        } else if (ip.row == 2) {
-            c.textLabel.text = @"免打扰图标"; c.detailTextLabel.text = @"隐藏聊表铃铛图标"; c.accessoryView = [self sw:kHideDNDIcon];
-            [(UISwitch *)c.accessoryView addTarget:self action:@selector(toggleDND:) forControlEvents:UIControlEventValueChanged];
-        } else if (ip.row == 3) {
-            c.textLabel.text = @"截图转发按钮"; c.detailTextLabel.text = @"去除截图后小按钮"; c.accessoryView = [self sw:kScreenShotHide];
-            [(UISwitch *)c.accessoryView addTarget:self action:@selector(toggleShot:) forControlEvents:UIControlEventValueChanged];
-        } else {
-            c.textLabel.text = @"消息过滤"; c.detailTextLabel.text = [NSString stringWithFormat:@"%ld 个关键词", (long)filterKeywords().count];
+    if (ip.section == 0) { // 聊天增强
+        switch (ip.row) {
+        case 0: c.textLabel.text = @"小信号弹窗 (Duang)"; c.detailTextLabel.text = @"恢复微信 8.0.31+ 召唤弹窗"; c.accessoryView = [self sw:kDuangKey];
+            [(UISwitch *)c.accessoryView addTarget:self action:@selector(toggleDuang:) forControlEvents:UIControlEventValueChanged]; break;
+        case 1: c.textLabel.text = @"游戏作弊"; c.detailTextLabel.text = @"骰子 / 猜拳 随意选择"; c.accessoryView = [self sw:kGameCheatKey];
+            [(UISwitch *)c.accessoryView addTarget:self action:@selector(toggleGCheat:) forControlEvents:UIControlEventValueChanged]; break;
+        case 2: c.textLabel.text = @"输入框手势"; c.detailTextLabel.text = @"聊天栏左滑清除 · 右滑粘贴"; c.accessoryView = [self sw:kSwipeInput];
+            [(UISwitch *)c.accessoryView addTarget:self action:@selector(toggleSwipe:) forControlEvents:UIControlEventValueChanged]; break;
+        case 3: c.textLabel.text = @"自动登录电脑微信"; c.detailTextLabel.text = @"扫码后自动确认登录"; c.accessoryView = [self sw:kAutoLoginKey];
+            [(UISwitch *)c.accessoryView addTarget:self action:@selector(toggleLogin:) forControlEvents:UIControlEventValueChanged]; break;
+        case 4: c.textLabel.text = @"消息过滤"; c.detailTextLabel.text = [NSString stringWithFormat:@"已设 %ld 个关键词", (long)filterKeywords().count];
             c.accessoryView = [self sw:kMsgFilterKey];
             [(UISwitch *)c.accessoryView addTarget:self action:@selector(toggleFilter:) forControlEvents:UIControlEventValueChanged];
-            c.accessoryType = UITableViewCellAccessoryDisclosureIndicator; c.selectionStyle = UITableViewCellSelectionStyleDefault;
+            c.accessoryType = UITableViewCellAccessoryDisclosureIndicator; c.selectionStyle = UITableViewCellSelectionStyleDefault; break;
+        case 5: c.textLabel.text = @"圆角设置"; c.detailTextLabel.text = @"自定义 UI 圆角样式"; c.accessoryType = UITableViewCellAccessoryDisclosureIndicator; c.selectionStyle = UITableViewCellSelectionStyleDefault; break;
         }
         return c;
     }
-    // S2: 插件收纳
-    if (ip.section == 2) {
+    if (ip.section == 1) { // 界面
+        switch (ip.row) {
+        case 0: c.textLabel.text = @"去广告"; c.detailTextLabel.text = @"朋友圈 · 文章 · 小程序"; c.accessoryView = [self sw:kAdBlockKey];
+            [(UISwitch *)c.accessoryView addTarget:self action:@selector(toggleAd:) forControlEvents:UIControlEventValueChanged]; break;
+        case 1: c.textLabel.text = @"去除分割线"; c.detailTextLabel.text = @"隐藏所有列表分隔线"; c.accessoryView = [self sw:kNoSeparator];
+            [(UISwitch *)c.accessoryView addTarget:self action:@selector(toggleSep:) forControlEvents:UIControlEventValueChanged]; break;
+        case 2: c.textLabel.text = @"免打扰图标"; c.detailTextLabel.text = @"去除聊天列表铃铛图标"; c.accessoryView = [self sw:kHideDNDIcon];
+            [(UISwitch *)c.accessoryView addTarget:self action:@selector(toggleDND:) forControlEvents:UIControlEventValueChanged]; break;
+        case 3: c.textLabel.text = @"截图转发按钮"; c.detailTextLabel.text = @"去除截图后的快捷按钮"; c.accessoryView = [self sw:kScreenShotHide];
+            [(UISwitch *)c.accessoryView addTarget:self action:@selector(toggleShot:) forControlEvents:UIControlEventValueChanged]; break;
+        }
+        return c;
+    }
+    if (ip.section == 2) { // 插件收纳
+        NSArray *all = allPlugins();
         if (self.pluginFolded) {
-            c.textLabel.text = [NSString stringWithFormat:@"▶ 插件收纳隐藏 (%lu 个)", (unsigned long)allPlugins().count];
+            c.textLabel.text = [NSString stringWithFormat:@"已收纳 %lu 个插件", (unsigned long)all.count];
+            c.detailTextLabel.text = @"点击展开管理";
+            c.selectionStyle = UITableViewCellSelectionStyleDefault;
+            return c;
+        }
+        if (ip.row == 0) {
+            c.textLabel.text = @"收起列表";
+            c.textLabel.textColor = [UIColor systemBlueColor];
             c.selectionStyle = UITableViewCellSelectionStyleDefault;
         } else {
-            NSArray *all = allPlugins();
-            if (ip.row == 0) { c.textLabel.text = @"▲ 收起"; c.selectionStyle = UITableViewCellSelectionStyleDefault;
+            NSInteger idx = ip.row - 1;
+            if (idx < all.count) {
+                c.textLabel.text = all[idx];
+                c.detailTextLabel.text = nil;
+                UISwitch *sw = [[UISwitch alloc] init]; sw.on = !isPluginBlocked(all[idx]); sw.tag = idx;
+                [sw addTarget:self action:@selector(togglePlugin:) forControlEvents:UIControlEventValueChanged];
+                c.accessoryView = sw;
             } else {
-                NSInteger idx = ip.row - 1;
-                if (idx < all.count) {
-                    NSString *title = all[idx];
-                    c.textLabel.text = title;
-                    UISwitch *sw = [[UISwitch alloc] init]; sw.on = !isPluginBlocked(title); sw.tag = idx;
-                    [sw addTarget:self action:@selector(togglePlugin:) forControlEvents:UIControlEventValueChanged];
-                    c.accessoryView = sw;
-                } else { c.textLabel.text = @"⚠️ 需重启微信生效"; c.textLabel.textColor = [UIColor systemRedColor]; c.textLabel.font = [UIFont systemFontOfSize:11]; }
+                c.textLabel.text = @"需重启微信生效";
+                c.textLabel.font = [UIFont systemFontOfSize:11];
+                c.textLabel.textColor = [UIColor systemRedColor];
             }
         }
         return c;
     }
     // S3: 关于
-    if (ip.row == 0) { c.textLabel.text = @"作者"; c.detailTextLabel.text = @"Cc"; c.accessoryType = UITableViewCellAccessoryDisclosureIndicator; c.selectionStyle = UITableViewCellSelectionStyleDefault; }
-    else if (ip.row == 1) { c.textLabel.text = @"声明"; c.detailTextLabel.text = @"仅供自己使用学习交流"; }
-    else if (ip.row == 2) { c.textLabel.text = @"自动登录"; c.detailTextLabel.text = @"电脑登录自动确认";
-        c.accessoryView = [self sw:kAutoLoginKey]; [(UISwitch *)c.accessoryView addTarget:self action:@selector(toggleLogin:) forControlEvents:UIControlEventValueChanged];
-    }
-    else { c.textLabel.text = @"版本"; c.detailTextLabel.text = @"1.0.0（连点5次复制wxid）"; }
+    if (ip.row == 0) { c.textLabel.text = @"作者"; c.detailTextLabel.text = @"Cc  wxid_ntutupipyxtq22"; c.accessoryType = UITableViewCellAccessoryDisclosureIndicator; c.selectionStyle = UITableViewCellSelectionStyleDefault; }
+    else if (ip.row == 1) { c.textLabel.text = @"声明"; c.detailTextLabel.text = @"仅供自己使用学习交流，请勿传播"; }
+    else { c.textLabel.text = @"版本 1.0.0"; c.detailTextLabel.text = @"连点 5 次复制 wxid 到剪贴板"; }
     return c;
 }
 
