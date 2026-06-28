@@ -799,26 +799,26 @@ static NSArray<NSString *> *hiddenCards(void) {
 - (void)addCell:(id)cell;
 @end
 
-// 隐藏底部卡片: hook MMTableViewCell + cellInfo
+// 隐藏底部卡片
 %hook MMTableViewCell
 - (void)didMoveToSuperview {
     %orig;
     NSArray *names = hiddenCards();
     if (!names.count) return;
-    // 递归搜索 UILabel
     for (UIView *sub in self.contentView.subviews) {
         if ([sub isKindOfClass:[UILabel class]]) {
             NSString *t = [(UILabel *)sub text];
             for (NSString *name in names) {
                 if (t.length && [t containsString:name]) {
-                    id info = [self valueForKey:@"cellInfo"];
-                    if (info) {
-                        @try { [info setValue:@0 forKey:@"m_height"]; } @catch(id e){}
-                        @try { [info setValue:@0 forKey:@"height"]; } @catch(id e){}
-                        @try { [info setValue:@0 forKey:@"cellHeight"]; } @catch(id e){}
-                    }
                     self.hidden = YES;
                     self.alpha = 0;
+                    // 强制父 TableView 重算高度消除留白
+                    UIView *v = self.superview;
+                    while (v && ![v isKindOfClass:[UITableView class]]) v = v.superview;
+                    if (v) {
+                        [(UITableView *)v beginUpdates];
+                        [(UITableView *)v endUpdates];
+                    }
                     return;
                 }
             }
