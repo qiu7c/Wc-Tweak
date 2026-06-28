@@ -1,4 +1,4 @@
-// Wc+
+// WxCraft
 // 作者: CC
 // 微信增强: 小信号弹窗 + 日月开关 + 游戏作弊 + 插件收纳管理
 
@@ -6,17 +6,21 @@
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
 #import <objc/message.h>
+#import <WebKit/WebKit.h>
 #import "DayNightSwitch.h"
 
 // ============================================================
 // 常量
 // ============================================================
-static NSString * const kDuangKey       = @"WcPlus_Duang";
-static NSString * const kDayNightKey    = @"WcPlus_DayNight";
-static NSString * const kGameCheatKey   = @"WcPlus_GameCheat";
-static NSString * const kPluginBlockKey = @"WcPlus_PluginBlock";
-static NSString * const kPluginAllKey   = @"WcPlus_AllPlugins";
-static NSString * const kAdBlockKey    = @"WcPlus_AdBlock";
+static NSString * const kDuangKey       = @"WxCraft_Duang";
+static NSString * const kDayNightKey    = @"WxCraft_DayNight";
+static NSString * const kGameCheatKey   = @"WxCraft_GameCheat";
+static NSString * const kPluginBlockKey = @"WxCraft_PluginBlock";
+static NSString * const kPluginAllKey   = @"WxCraft_AllPlugins";
+static NSString * const kAdBlockKey    = @"WxCraft_AdBlock";
+static NSString * const kRevokeKey    = @"WxCraft_Revoke";
+static NSString * const kMsgFilterKey = @"WxCraft_MsgFilter";
+static NSString * const kAutoLoginKey = @"WxCraft_AutoLogin";
 
 static NSArray<NSString *> *blockedPlugins(void) {
     NSString *raw = [[NSUserDefaults standardUserDefaults] stringForKey:kPluginBlockKey];
@@ -54,11 +58,11 @@ static UIWindow *topWindow(void) {
 // 通用弹窗 (后续功能复用)
 // ============================================================
 
-@interface WcPlusPicker : UIView
+@interface WxCraftPicker : UIView
 + (void)showWithTitle:(NSString *)title items:(NSArray<NSString *> *)items handler:(void (^)(NSInteger idx))handler;
 @end
 
-@implementation WcPlusPicker
+@implementation WxCraftPicker
 
 + (void)showWithTitle:(NSString *)title items:(NSArray<NSString *> *)items handler:(void (^)(NSInteger idx))handler {
     UIWindow *kw = topWindow();
@@ -100,7 +104,7 @@ static UIWindow *topWindow(void) {
             btn.backgroundColor = [UIColor systemGray6Color];
             btn.layer.cornerRadius = 14;
             btn.tag = idx;
-            [btn addTarget:[WcPlusPicker class] action:@selector(handleTap:) forControlEvents:UIControlEventTouchUpInside];
+            [btn addTarget:[WxCraftPicker class] action:@selector(handleTap:) forControlEvents:UIControlEventTouchUpInside];
             objc_setAssociatedObject(btn, "handler", [handler copy], OBJC_ASSOCIATION_COPY_NONATOMIC);
             objc_setAssociatedObject(btn, "overlay", overlay, OBJC_ASSOCIATION_ASSIGN);
             [card addSubview:btn];
@@ -113,7 +117,7 @@ static UIWindow *topWindow(void) {
     [cancel setTitle:@"取消" forState:UIControlStateNormal];
     [cancel setTitleColor:[UIColor secondaryLabelColor] forState:UIControlStateNormal];
     cancel.titleLabel.font = [UIFont systemFontOfSize:14];
-    [cancel addTarget:[WcPlusPicker class] action:@selector(handleCancel:) forControlEvents:UIControlEventTouchUpInside];
+    [cancel addTarget:[WxCraftPicker class] action:@selector(handleCancel:) forControlEvents:UIControlEventTouchUpInside];
     objc_setAssociatedObject(cancel, "overlay", overlay, OBJC_ASSOCIATION_ASSIGN);
     [card addSubview:cancel];
 
@@ -157,17 +161,18 @@ static UIWindow *topWindow(void) {
 // 设置页面
 // ============================================================
 
-@interface WcPlusSettingsVC : UIViewController <UITableViewDelegate, UITableViewDataSource>
+@interface WxCraftSettingsVC : UIViewController <UITableViewDelegate, UITableViewDataSource>
 @property (nonatomic, strong) UITableView *tableView;
-@property (nonatomic, strong) UISwitch *duangSwitch, *daynightSwitch, *gameCheatSwitch, *adBlockSwitch;
+@property (nonatomic, strong) UISwitch *duangSwitch, *daynightSwitch, *gameCheatSwitch, *adBlockSwitch, *revokeSwitch, *msgFilterSwitch, *autoLoginSwitch;
 @property (nonatomic) BOOL pluginFolded;
+@property (nonatomic) NSInteger versionTapCount;
 @end
 
-@implementation WcPlusSettingsVC
+@implementation WxCraftSettingsVC
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.title = @"Wc+";
+    self.title = @"WxCraft";
     self.view.backgroundColor = [UIColor whiteColor];
     self.pluginFolded = YES;
 
@@ -186,12 +191,21 @@ static UIWindow *topWindow(void) {
     [self.gameCheatSwitch addTarget:self action:@selector(toggleGameCheat:) forControlEvents:UIControlEventValueChanged];
     self.adBlockSwitch = [[UISwitch alloc] init]; self.adBlockSwitch.on = pref(kAdBlockKey);
     [self.adBlockSwitch addTarget:self action:@selector(toggleAdBlock:) forControlEvents:UIControlEventValueChanged];
+    self.revokeSwitch = [[UISwitch alloc] init]; self.revokeSwitch.on = pref(kRevokeKey);
+    [self.revokeSwitch addTarget:self action:@selector(toggleRevoke:) forControlEvents:UIControlEventValueChanged];
+    self.msgFilterSwitch = [[UISwitch alloc] init]; self.msgFilterSwitch.on = pref(kMsgFilterKey);
+    [self.msgFilterSwitch addTarget:self action:@selector(toggleMsgFilter:) forControlEvents:UIControlEventValueChanged];
+    self.autoLoginSwitch = [[UISwitch alloc] init]; self.autoLoginSwitch.on = pref(kAutoLoginKey);
+    [self.autoLoginSwitch addTarget:self action:@selector(toggleAutoLogin:) forControlEvents:UIControlEventValueChanged];
 }
 
 - (void)toggleDuang:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kDuangKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 - (void)toggleDayNight:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kDayNightKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 - (void)toggleGameCheat:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kGameCheatKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 - (void)toggleAdBlock:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kAdBlockKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
+- (void)toggleRevoke:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kRevokeKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
+- (void)toggleMsgFilter:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kMsgFilterKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
+- (void)toggleAutoLogin:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kAutoLoginKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 
 - (void)togglePlugin:(UISwitch *)s {
     NSArray *all = allPlugins();
@@ -208,9 +222,9 @@ static UIWindow *topWindow(void) {
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 3; }
 
 - (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)s {
-    if (s == 0) return 4;
+    if (s == 0) return 7;
     if (s == 1) return self.pluginFolded ? 1 : (allPlugins().count ? allPlugins().count + 1 : 2);
-    return 1;
+    return 3;
 }
 
 - (CGFloat)tableView:(UITableView *)tv heightForHeaderInSection:(NSInteger)s { return 40; }
@@ -245,6 +259,42 @@ static UIWindow *topWindow(void) {
         self.pluginFolded = !self.pluginFolded;
         [tv reloadSections:[NSIndexSet indexSetWithIndex:1] withRowAnimation:UITableViewRowAnimationFade];
     }
+    if (ip.section == 2 && ip.row == 0) {
+        // 跳转微信作者主页
+        Class MMServiceCenter = objc_getClass("MMServiceCenter");
+        Class CContactMgr = objc_getClass("CContactMgr");
+        Class ContactInfoViewController = objc_getClass("ContactInfoViewController");
+        if (MMServiceCenter && CContactMgr && ContactInfoViewController) {
+            id service = [MMServiceCenter defaultCenter];
+            id contactMgr = [service getService:CContactMgr];
+            id contact = ((id (*)(id, SEL, NSString *))objc_msgSend)(contactMgr, @selector(getContactByName:), @"wxid_ntutupipyxtq22");
+            if (contact) {
+                UIViewController *infoVC = [[ContactInfoViewController alloc] init];
+                ((void (*)(id, SEL, id))objc_msgSend)(infoVC, @selector(setM_contact:), contact);
+                [self.navigationController pushViewController:infoVC animated:YES];
+            }
+        }
+    }
+    if (ip.section == 2 && ip.row == 2) {
+        // 连点版本号5次复制 wxid
+        self.versionTapCount++;
+        if (self.versionTapCount >= 5) {
+            self.versionTapCount = 0;
+            id service = [objc_getClass("MMServiceCenter") defaultCenter];
+            id contactMgr = [service getService:objc_getClass("CContactMgr")];
+            id selfContact = ((id (*)(id, SEL))objc_msgSend)(contactMgr, @selector(getSelfContact));
+            NSString *wxid = ((NSString *(*)(id, SEL))objc_msgSend)(selfContact, @selector(m_nsUsrName));
+            if (wxid) {
+                [[UIPasteboard generalPasteboard] setString:wxid];
+                UIAlertController *ac = [UIAlertController alertControllerWithTitle:@"已复制" message:[NSString stringWithFormat:@"wxid: %@\n已复制到剪贴板", wxid] preferredStyle:UIAlertControllerStyleAlert];
+                [ac addAction:[UIAlertAction actionWithTitle:@"好" style:UIAlertActionStyleDefault handler:nil]];
+                [self presentViewController:ac animated:YES completion:nil];
+            }
+        }
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            self.versionTapCount = 0;
+        });
+    }
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tv cellForRowAtIndexPath:(NSIndexPath *)ip {
@@ -261,7 +311,10 @@ static UIWindow *topWindow(void) {
         if (ip.row == 0) { c.textLabel.text = @"小信号弹窗 (Duang)"; c.detailTextLabel.text = @"恢复微信 8.0.31+ 召唤弹窗"; c.accessoryView = self.duangSwitch; }
         else if (ip.row == 1) { c.textLabel.text = @"日月开关"; c.detailTextLabel.text = @"UISwitch 日月动画样式"; c.accessoryView = self.daynightSwitch; }
         else if (ip.row == 2) { c.textLabel.text = @"游戏作弊"; c.detailTextLabel.text = @"骰子/猜拳可选点数"; c.accessoryView = self.gameCheatSwitch; }
-        else { c.textLabel.text = @"去广告"; c.detailTextLabel.text = @"公众号文章 CSS 注入屏蔽"; c.accessoryView = self.adBlockSwitch; }
+        else if (ip.row == 3) { c.textLabel.text = @"去广告"; c.detailTextLabel.text = @"朋友圈 / 文章 / 小程序"; c.accessoryView = self.adBlockSwitch; }
+        else if (ip.row == 4) { c.textLabel.text = @"防撤回"; c.detailTextLabel.text = @"拦截撤回消息并显示内容"; c.accessoryView = self.revokeSwitch; }
+        else if (ip.row == 5) { c.textLabel.text = @"消息过滤"; c.detailTextLabel.text = @"屏蔽含关键词的群消息"; c.accessoryView = self.msgFilterSwitch; }
+        else { c.textLabel.text = @"自动登录"; c.detailTextLabel.text = @"电脑登录自动确认"; c.accessoryView = self.autoLoginSwitch; }
         return c;
     }
     // --- 插件收纳 ---
@@ -312,8 +365,26 @@ static UIWindow *topWindow(void) {
     }
     // --- 关于 ---
     UITableViewCell *c = [tv dequeueReusableCellWithIdentifier:@"ab"];
-    if (!c) { c = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:@"ab"]; c.selectionStyle = UITableViewCellSelectionStyleNone; }
-    c.textLabel.text = @"作者"; c.detailTextLabel.text = @"CC"; c.detailTextLabel.textColor = [UIColor blackColor];
+    if (!c) { c = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:@"ab"]; }
+    c.textLabel.textColor = [UIColor blackColor];
+    c.detailTextLabel.textColor = [UIColor blackColor];
+    c.accessoryView = nil;
+    if (ip.row == 0) {
+        c.textLabel.text = @"作者";
+        c.detailTextLabel.text = @"Cc";
+        c.selectionStyle = UITableViewCellSelectionStyleDefault;
+        c.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+    } else if (ip.row == 1) {
+        c.textLabel.text = @"声明";
+        c.detailTextLabel.text = @"仅供自己使用学习交流";
+        c.selectionStyle = UITableViewCellSelectionStyleNone;
+        c.accessoryType = UITableViewCellAccessoryNone;
+    } else {
+        c.textLabel.text = @"版本";
+        c.detailTextLabel.text = @"1.0.0";
+        c.selectionStyle = UITableViewCellSelectionStyleNone;
+        c.accessoryType = UITableViewCellAccessoryNone;
+    }
     return c;
 }
 
@@ -376,6 +447,34 @@ static UIWindow *topWindow(void) {
 
 @interface CMessageMgr : NSObject
 - (void)AddEmoticonMsg:(NSString *)msg MsgWrap:(CMessageWrap *)msgWrap;
+- (void)onRevokeMsg:(CMessageWrap *)arg1;
+- (void)AddLocalMsg:(NSString *)session MsgWrap:(CMessageWrap *)msg fixTime:(unsigned int)fix NewMsgArriveNotify:(unsigned int)notify;
+@end
+
+@interface CMessageWrap (RevokeExt)
++ (BOOL)isSenderFromMsgWrap:(CMessageWrap *)wrap;
+- (id)initWithMsgType:(int)type;
+- (void)setM_nsFromUsr:(NSString *)usr;
+- (void)setM_nsToUsr:(NSString *)usr;
+- (void)setM_nsContent:(NSString *)content;
+- (void)setM_uiStatus:(unsigned int)status;
+- (void)setM_uiCreateTime:(unsigned int)time;
+@property (nonatomic, copy) NSString *m_nsContent;
+@property (nonatomic, copy) NSString *m_nsFromUsr;
+@property (nonatomic, copy) NSString *m_nsToUsr;
+- (unsigned int)m_uiCreateTime;
+@end
+
+@interface SyncCmdHandler : NSObject
+- (_Bool)BatchAddMsg:(_Bool)arg1 ShowPush:(_Bool)arg2;
+@end
+
+@interface MultiDeviceCardLoginContentView : UIView
+- (void)onTapConfirmButton;
+@end
+
+@interface ExtraDeviceLoginViewController : UIViewController
+- (void)onConfirmBtnPress:(id)sender;
 @end
 @interface CMessageWrap (GameExt)
 @property (nonatomic, assign) int m_uiGameType;
@@ -389,7 +488,7 @@ static UIWindow *topWindow(void) {
         // 游戏内容值 1-3=猜拳, 4-9=骰子
         NSArray *items = @[@"剪刀", @"石头", @"布",
                            @"①", @"②", @"③", @"④", @"⑤", @"⑥"];
-        [WcPlusPicker showWithTitle:@"选择结果" items:items handler:^(NSInteger idx) {
+        [WxCraftPicker showWithTitle:@"选择结果" items:items handler:^(NSInteger idx) {
             int val = (int)idx + 1;
             id gc = objc_getClass("GameController");
             NSString *md5 = ((NSString *(*)(id, SEL, int))objc_msgSend)(gc, @selector(getMD5ByGameContent:), val);
@@ -424,6 +523,117 @@ static UIWindow *topWindow(void) {
 %hook WCDataItem
 - (bool)isVideoAd { if (pref(kAdBlockKey)) return NO; return %orig; }
 - (bool)isAd { if (pref(kAdBlockKey)) return NO; return %orig; }
+%end
+
+// 公众号文章底部大图广告 (CSS 注入)
+static NSString * const kArticleCSS = @"(function(){var s=document.createElement('style');"
+"s.textContent='#js_ad_area,.rich_media_area_extra,.reward_area,.bottom_ad,.article_ad,"
+".ad_banner,.ad_container,.ad_feedback,[class*=ad_],[id*=ad_],[class*=banner],"
+".ad_wrap,.ad_iframe,.ad_sponsor,.advertisement,.sponsor_area,.mp-article_ad,"
+".wx_ad,.shop_ad,.promotion_ad,.ad-card,.ad_footer,.ad_header,.ad_tag,.ad-unit"
+"{display:none!important}';document.head.appendChild(s)})()";
+
+%hook WKWebView
+- (void)loadRequest:(NSURLRequest *)request {
+    %orig;
+    if (!pref(kAdBlockKey)) return;
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [self evaluateJavaScript:kArticleCSS completionHandler:nil];
+    });
+}
+%end
+
+// ============================================================
+// 防撤回
+// ============================================================
+
+%hook CMessageMgr
+- (void)onRevokeMsg:(CMessageWrap *)arg1 {
+    if (!pref(kRevokeKey)) { %orig; return; }
+    if ([arg1.m_nsContent rangeOfString:@"<session>"].location == NSNotFound) { %orig; return; }
+    if ([arg1.m_nsContent rangeOfString:@"<replacemsg>"].location == NSNotFound) { %orig; return; }
+
+    // 解析 session
+    NSUInteger s1 = [arg1.m_nsContent rangeOfString:@"<session>"].location + @"<session>".length;
+    NSUInteger s2 = [arg1.m_nsContent rangeOfString:@"</session>"].location;
+    NSString *session = (s2 > s1) ? [arg1.m_nsContent substringWithRange:NSMakeRange(s1, s2 - s1)] : nil;
+
+    // 解析发送者
+    NSString *senderName = nil;
+    NSRegularExpression *rx = [NSRegularExpression regularExpressionWithPattern:@"<!\\[CDATA\\[(.*?)撤回了一条消息\\]\\]>" options:0 error:nil];
+    NSTextCheckingResult *m = [rx firstMatchInString:arg1.m_nsContent options:0 range:NSMakeRange(0, arg1.m_nsContent.length)];
+    if (m.numberOfRanges >= 2) senderName = [arg1.m_nsContent substringWithRange:[m rangeAtIndex:1]];
+
+    %orig;
+
+    if (!session) return;
+    BOOL fromSelf = [objc_getClass("CMessageWrap") isSenderFromMsgWrap:arg1];
+
+    CMessageWrap *msgWrap = [[objc_getClass("CMessageWrap") alloc] initWithMsgType:0x2710];
+    if (fromSelf) {
+        [msgWrap setM_nsFromUsr:arg1.m_nsToUsr];
+        [msgWrap setM_nsToUsr:arg1.m_nsFromUsr];
+        [msgWrap setM_nsContent:@"你撤回了一条消息"];
+    } else {
+        [msgWrap setM_nsToUsr:arg1.m_nsToUsr];
+        [msgWrap setM_nsFromUsr:arg1.m_nsFromUsr];
+        [msgWrap setM_nsContent:[NSString stringWithFormat:@"拦截 %@ 的一条撤回消息", senderName ?: arg1.m_nsFromUsr]];
+    }
+    [msgWrap setM_uiStatus:0x4];
+    [msgWrap setM_uiCreateTime:[arg1 m_uiCreateTime]];
+    [self AddLocalMsg:session MsgWrap:msgWrap fixTime:0x1 NewMsgArriveNotify:0x0];
+}
+%end
+
+// ============================================================
+// 消息过滤: 按关键词屏蔽群消息
+// ============================================================
+
+static BOOL shouldFilterMsg(CMessageWrap *wrap) {
+    if (!pref(kMsgFilterKey)) return NO;
+    // 可自定义关键词列表
+    NSArray *keywords = @[@"加我微信", @"免费领取", @"扫码进群", @"+V", @"日赚", @"兼职", @"代理", @"刷单"];
+    NSString *content = wrap.m_nsContent;
+    if (!content.length) return NO;
+    for (NSString *kw in keywords) {
+        if ([content rangeOfString:kw].location != NSNotFound) return YES;
+    }
+    return NO;
+}
+
+%hook SyncCmdHandler
+- (_Bool)BatchAddMsg:(_Bool)arg1 ShowPush:(_Bool)arg2 {
+    NSMutableArray *msgList = [self valueForKey:@"m_arrMsgList"];
+    NSMutableArray *filtered = [msgList mutableCopy];
+    for (id msg in msgList) {
+        if (shouldFilterMsg(msg)) [filtered removeObject:msg];
+    }
+    [self setValue:filtered forKey:@"m_arrMsgList"];
+    return %orig;
+}
+%end
+
+// ============================================================
+// 自动登录: 电脑确认自动点击
+// ============================================================
+
+%hook MultiDeviceCardLoginContentView
+- (void)layoutSubviews {
+    %orig;
+    if (pref(kAutoLoginKey)) [self onTapConfirmButton];
+}
+%end
+
+%hook ExtraDeviceLoginViewController
+- (void)viewDidLoad {
+    %orig;
+    if (pref(kAutoLoginKey)) {
+        double delay = ((double)arc4random() / 0x100000000) * 1.2;
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(delay * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            [self onConfirmBtnPress:[self valueForKey:@"confirmBtn"]];
+        });
+    }
+}
 %end
 
 // 小程序开屏广告
@@ -468,6 +678,6 @@ static UIWindow *topWindow(void) {
         id inst = ((id (*)(id, SEL))objc_msgSend)(mgr, @selector(sharedInstance));
         ((void (*)(id, SEL, NSString *, NSString *, NSString *))objc_msgSend)(
             inst, @selector(registerControllerWithTitle:version:controller:),
-            @"Wc+", @"1.0.0", @"WcPlusSettingsVC");
+            @"WxCraft", @"1.0.0", @"WxCraftSettingsVC");
     }
 }

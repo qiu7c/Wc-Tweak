@@ -11,11 +11,11 @@ INSTALL_TARGET_PROCESSES = SpringBoard
 
 include $(THEOS)/makefiles/common.mk
 
-TWEAK_NAME = WcPlus
+TWEAK_NAME = WxCraft
 
 # 源文件
-WcPlus_FILES = Tweak.xm DayNightSwitch.m
-WcPlus_CFLAGS = -fobjc-arc
-WcPlus_FRAMEWORKS = UIKit Foundation QuartzCore WebKit
+WxCraft_FILES = Tweak.xm DayNightSwitch.m
+WxCraft_CFLAGS = -fobjc-arc
+WxCraft_FRAMEWORKS = UIKit Foundation QuartzCore WebKit
 
 include $(THEOS_MAKE_PATH)/tweak.mk

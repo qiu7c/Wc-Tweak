@@ -1,5 +1,5 @@
-Package: com.cc.wcplus
-Name: WcPlus
+Package: com.cc.wxcraft
+Name: WxCraft
 Version: 1.0.0
 Architecture: iphoneos-arm64
 Description: 增强国外 App 功能
