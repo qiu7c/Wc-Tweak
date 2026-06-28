@@ -1022,11 +1022,13 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
 %new
 - (void)wxc_checkDND {
     if (!pref(kHideDNDIcon) || !self.superview) return;
-    CGFloat w = self.frame.size.width, h = self.frame.size.height;
-    // 免打扰图标: ~13×13, x≈44-46, 在聊天列表 Cell 中
-    if (w >= 12 && w <= 16 && h >= 12 && h <= 16 && self.frame.origin.x > 40 && self.frame.origin.x < 50) {
-        self.hidden = YES; self.alpha = 0;
-    }
+    // 只隐藏铃铛图标（免打扰），不误伤红点徽章
+    if (self.frame.size.width < 10 || self.frame.size.height > 14) return;
+    // 铃铛在聊天列表 cell 中的固定位置 x≈44
+    if (self.frame.origin.x < 42 || self.frame.origin.x > 48) return;
+    // 额外检查：铃铛图标通常有特定大小
+    if (self.frame.size.width > 14.5 || self.frame.size.height > 14.5) return;
+    self.hidden = YES; self.alpha = 0;
 }
 %end
 
