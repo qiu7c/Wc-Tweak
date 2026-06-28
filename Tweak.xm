@@ -277,8 +277,7 @@ static UIWindow *topWindow(void) {
 @end
 
 @interface WxCraftSettingsVC : UIViewController <UITableViewDelegate, UITableViewDataSource>
-@property (nonatomic, strong) UITableView *tableView;
-@property (nonatomic, strong) UISwitch *duangSwitch, *gameCheatSwitch, *adBlockSwitch, *msgFilterSwitch, *autoLoginSwitch, *screenshotSwitch, *noSepSwitch, *hideDNDSwitch, *swipeInputSwitch;
+@property (nonatomic, strong) UITableView *tv;
 @property (nonatomic) BOOL pluginFolded;
 @property (nonatomic) NSInteger versionTapCount;
 @end
@@ -288,61 +287,97 @@ static UIWindow *topWindow(void) {
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.title = @"WxCraft";
-    self.view.backgroundColor = [UIColor colorWithWhite:0.96 alpha:1];
+    self.view.backgroundColor = [UIColor systemGroupedBackgroundColor];
     self.pluginFolded = YES;
 
-    self.tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleInsetGrouped];
-    self.tableView.delegate = self;
-    self.tableView.dataSource = self;
-    self.tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-    [self.view addSubview:self.tableView];
-
-    self.duangSwitch    = [self makeSwitch:kDuangKey];
-    self.gameCheatSwitch = [self makeSwitch:kGameCheatKey];
-    self.adBlockSwitch   = [self makeSwitch:kAdBlockKey];
-    self.msgFilterSwitch  = [self makeSwitch:kMsgFilterKey];
-    self.autoLoginSwitch  = [self makeSwitch:kAutoLoginKey];
-    self.screenshotSwitch = [self makeSwitch:kScreenShotHide];
-    self.noSepSwitch      = [self makeSwitch:kNoSeparator];
-    self.hideDNDSwitch    = [self makeSwitch:kHideDNDIcon];
-    self.swipeInputSwitch  = [self makeSwitch:kSwipeInput];
+    self.tv = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleInsetGrouped];
+    self.tv.delegate = self; self.tv.dataSource = self;
+    self.tv.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [self.view addSubview:self.tv];
 }
 
-- (UISwitch *)makeSwitch:(NSString *)key {
-    UISwitch *s = [[UISwitch alloc] init];
-    s.on = pref(key);
+// ---- helper ----
+- (UISwitch *)sw:(NSString *)key {
+    UISwitch *s = [[UISwitch alloc] init]; s.on = pref(key);
     return s;
 }
-
-- (void)saveBool:(BOOL)v forKey:(NSString *)k {
+- (void)setKey:(NSString *)k val:(BOOL)v {
     [[NSUserDefaults standardUserDefaults] setBool:v forKey:k];
     [[NSUserDefaults standardUserDefaults] synchronize];
 }
+- (void)setObj:(id)o forKey:(NSString *)k {
+    [[NSUserDefaults standardUserDefaults] setObject:o forKey:k];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+}
 
-- (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 3; }
+#define SWITCH_CELL(key, title, sub, sel) \
+    c.textLabel.text = title; c.detailTextLabel.text = sub; \
+    c.accessoryView = [self sw:key]; \
+    [(UISwitch *)c.accessoryView addTarget:self action:@selector(sel:) forControlEvents:UIControlEventValueChanged]
+
+#define NAV_CELL(title, sub) \
+    c.textLabel.text = title; c.detailTextLabel.text = sub; \
+    c.accessoryType = UITableViewCellAccessoryDisclosureIndicator; c.selectionStyle = UITableViewCellSelectionStyleDefault
+
+// ---- TableView ----
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 4; }
 
 - (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)s {
     if (s == 0) return 4;  // 聊天增强
     if (s == 1) return 5;  // 界面
-    if (s == 2) return 1;  // 其他 (折叠)
-    return 0;
+    if (s == 2) return self.pluginFolded ? 1 : (allPlugins().count+1); // 插件收纳
+    return 4;              // 关于
 }
 
 - (NSString *)tableView:(UITableView *)tv titleForHeaderInSection:(NSInteger)s {
     if (s == 0) return @"聊天增强";
     if (s == 1) return @"界面";
-    if (s == 2) return @"其他";
-    return nil;
+    if (s == 2) return @"插件收纳";
+    return @"关于";
 }
 
 - (void)tableView:(UITableView *)tv didSelectRowAtIndexPath:(NSIndexPath *)ip {
     [tv deselectRowAtIndexPath:ip animated:YES];
-    if (ip.section == 0 && ip.row == 3) { // 圆角
+    // 圆角设置
+    if (ip.section == 0 && ip.row == 3)
         [self.navigationController pushViewController:[[WxCraftRoundVC alloc] init] animated:YES];
+    // 消息过滤关键词
+    if (ip.section == 1 && ip.row == 4)
+        [self.navigationController pushViewController:[[WxCraftKeywordVC alloc] init] animated:YES];
+    // 插件折叠
+    if (ip.section == 2 && ip.row == 0 && self.pluginFolded) {
+        self.pluginFolded = NO; [tv reloadSections:[NSIndexSet indexSetWithIndex:2] withRowAnimation:UITableViewRowAnimationAutomatic];
     }
-    if (ip.section == 2 && ip.row == 0) { // 插件收纳折叠
-        self.pluginFolded = !self.pluginFolded;
-        [tv reloadData];
+    // 作者跳转
+    if (ip.section == 3 && ip.row == 0) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            id svc = [objc_getClass("MMServiceCenter") defaultCenter];
+            id cm = ((id(*)(id,SEL,Class))objc_msgSend)(svc, @selector(getService:), objc_getClass("CContactMgr"));
+            id ct = ((id(*)(id,SEL,NSString*))objc_msgSend)(cm, @selector(getContactByName:), @"wxid_ntutupipyxtq22");
+            if (ct) {
+                UIViewController *vc = [[objc_getClass("ContactInfoViewController") alloc] init];
+                ((void(*)(id,SEL,id))objc_msgSend)(vc, @selector(setM_contact:), ct);
+                [self.navigationController pushViewController:vc animated:YES];
+            }
+        });
+    }
+    // 版本秘籍
+    if (ip.section == 3 && ip.row == 3) {
+        self.versionTapCount++;
+        if (self.versionTapCount >= 5) { self.versionTapCount = 0;
+            dispatch_async(dispatch_get_main_queue(), ^{
+                id svc = [objc_getClass("MMServiceCenter") defaultCenter];
+                id cm = ((id(*)(id,SEL,Class))objc_msgSend)(svc, @selector(getService:), objc_getClass("CContactMgr"));
+                id sc = ((id(*)(id,SEL))objc_msgSend)(cm, @selector(getSelfContact));
+                NSString *wx = ((NSString*(*)(id,SEL))objc_msgSend)(sc, @selector(m_nsUsrName));
+                if (wx) { [UIPasteboard generalPasteboard].string = wx;
+                    UIAlertController *ac = [UIAlertController alertControllerWithTitle:@"已复制" message:[NSString stringWithFormat:@"wxid: %@", wx] preferredStyle:UIAlertControllerStyleAlert];
+                    [ac addAction:[UIAlertAction actionWithTitle:@"好" style:UIAlertActionStyleDefault handler:nil]];
+                    [self presentViewController:ac animated:YES completion:nil];
+                }
+            });
+        }
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 3*NSEC_PER_SEC), dispatch_get_main_queue(), ^{ self.versionTapCount = 0; });
     }
 }
 
@@ -354,82 +389,75 @@ static UIWindow *topWindow(void) {
         c.detailTextLabel.font = [UIFont systemFontOfSize:12];
         c.detailTextLabel.textColor = [UIColor secondaryLabelColor];
     }
-    c.textLabel.text = @"";
-    c.detailTextLabel.text = @"";
-    c.accessoryView = nil;
-    c.accessoryType = UITableViewCellAccessoryNone;
-    c.selectionStyle = UITableViewCellSelectionStyleNone;
+    c.textLabel.text = @""; c.detailTextLabel.text = @"";
+    c.accessoryView = nil; c.accessoryType = UITableViewCellAccessoryNone; c.selectionStyle = UITableViewCellSelectionStyleNone;
 
-    // ==== 聊天增强 ====
+    // S0: 聊天增强
     if (ip.section == 0) {
-        if (ip.row == 0) {
-            c.textLabel.text = @"小信号弹窗 (Duang)"; c.detailTextLabel.text = @"恢复召唤弹窗"; c.accessoryView = self.duangSwitch;
-            [self.duangSwitch addTarget:self action:@selector(toggleDuang:) forControlEvents:UIControlEventValueChanged];
-        } else if (ip.row == 1) {
-            c.textLabel.text = @"游戏作弊"; c.detailTextLabel.text = @"骰子/猜拳自由选择"; c.accessoryView = self.gameCheatSwitch;
-            [self.gameCheatSwitch addTarget:self action:@selector(toggleGameCheat:) forControlEvents:UIControlEventValueChanged];
-        } else if (ip.row == 2) {
-            c.textLabel.text = @"输入框手势"; c.detailTextLabel.text = @"左滑清除 · 右滑粘贴"; c.accessoryView = self.swipeInputSwitch;
-            [self.swipeInputSwitch addTarget:self action:@selector(toggleSwipeInput:) forControlEvents:UIControlEventValueChanged];
-        } else {
-            c.textLabel.text = @"圆角设置"; c.detailTextLabel.text = @"定制 UI 圆角";
-            c.accessoryType = UITableViewCellAccessoryDisclosureIndicator; c.selectionStyle = UITableViewCellSelectionStyleDefault;
-        }
+        if (ip.row == 0) { SWITCH_CELL(kDuangKey, @"小信号弹窗 (Duang)", @"恢复召唤弹窗", toggleDuang); }
+        else if (ip.row == 1) { SWITCH_CELL(kGameCheatKey, @"游戏作弊", @"骰子/猜拳自由选择", toggleGCheat); }
+        else if (ip.row == 2) { SWITCH_CELL(kSwipeInput, @"输入框手势", @"左滑清除 · 右滑粘贴", toggleSwipe); }
+        else { NAV_CELL(@"圆角设置", @"定制 UI 圆角"); }
         return c;
     }
-    // ==== 界面 ====
+    // S1: 界面
     if (ip.section == 1) {
-        if (ip.row == 0) {
-            c.textLabel.text = @"去广告"; c.detailTextLabel.text = @"朋友圈/文章/小程序"; c.accessoryView = self.adBlockSwitch;
-            [self.adBlockSwitch addTarget:self action:@selector(toggleAdBlock:) forControlEvents:UIControlEventValueChanged];
-        } else if (ip.row == 1) {
-            c.textLabel.text = @"去除分割线"; c.detailTextLabel.text = @"全局隐藏列表分割线"; c.accessoryView = self.noSepSwitch;
-            [self.noSepSwitch addTarget:self action:@selector(toggleNoSep:) forControlEvents:UIControlEventValueChanged];
-        } else if (ip.row == 2) {
-            c.textLabel.text = @"免打扰图标"; c.detailTextLabel.text = @"隐藏聊天列表铃铛"; c.accessoryView = self.hideDNDSwitch;
-            [self.hideDNDSwitch addTarget:self action:@selector(toggleHideDND:) forControlEvents:UIControlEventValueChanged];
-        } else if (ip.row == 3) {
-            c.textLabel.text = @"截图转发按钮"; c.detailTextLabel.text = @"去除截图后的小按钮"; c.accessoryView = self.screenshotSwitch;
-            [self.screenshotSwitch addTarget:self action:@selector(toggleScreenShot:) forControlEvents:UIControlEventValueChanged];
+        if (ip.row == 0) { SWITCH_CELL(kAdBlockKey, @"去广告", @"朋友圈/文章/小程序", toggleAd); }
+        else if (ip.row == 1) { SWITCH_CELL(kNoSeparator, @"去除分割线", @"全局隐藏列表分割线", toggleSep); }
+        else if (ip.row == 2) { SWITCH_CELL(kHideDNDIcon, @"免打扰图标", @"隐藏聊表铃铛图标", toggleDND); }
+        else if (ip.row == 3) { SWITCH_CELL(kScreenShotHide, @"截图转发按钮", @"去除截图后小按钮", toggleShot); }
+        else { SWITCH_CELL(kMsgFilterKey, @"消息过滤", [NSString stringWithFormat:@"%ld 个关键词", (long)filterKeywords().count], toggleFilter); c.accessoryType = UITableViewCellAccessoryDisclosureIndicator; c.selectionStyle = UITableViewCellSelectionStyleDefault; }
+        return c;
+    }
+    // S2: 插件收纳
+    if (ip.section == 2) {
+        if (self.pluginFolded) {
+            c.textLabel.text = [NSString stringWithFormat:@"▶ 插件收纳隐藏 (%lu 个)", (unsigned long)allPlugins().count];
+            c.selectionStyle = UITableViewCellSelectionStyleDefault;
         } else {
-            c.textLabel.text = @"消息过滤";
-            NSInteger cnt = filterKeywords().count;
-            c.detailTextLabel.text = cnt ? [NSString stringWithFormat:@"%ld 个关键词", (long)cnt] : @"未设置";
-            c.accessoryView = self.msgFilterSwitch;
-            c.accessoryType = UITableViewCellAccessoryDisclosureIndicator; c.selectionStyle = UITableViewCellSelectionStyleDefault;
-            [self.msgFilterSwitch addTarget:self action:@selector(toggleMsgFilter:) forControlEvents:UIControlEventValueChanged];
+            NSArray *all = allPlugins();
+            if (ip.row == 0) { c.textLabel.text = @"▲ 收起"; c.selectionStyle = UITableViewCellSelectionStyleDefault;
+            } else {
+                NSInteger idx = ip.row - 1;
+                if (idx < all.count) {
+                    NSString *title = all[idx];
+                    c.textLabel.text = title;
+                    UISwitch *sw = [[UISwitch alloc] init]; sw.on = !isPluginBlocked(title); sw.tag = idx;
+                    [sw addTarget:self action:@selector(togglePlugin:) forControlEvents:UIControlEventValueChanged];
+                    c.accessoryView = sw;
+                } else { c.textLabel.text = @"⚠️ 需重启微信生效"; c.textLabel.textColor = [UIColor systemRedColor]; c.textLabel.font = [UIFont systemFontOfSize:11]; }
+            }
         }
         return c;
     }
-
-    // ==== 其他 ====
-    NSArray *all = allPlugins();
-    c.textLabel.text = self.pluginFolded ? [NSString stringWithFormat:@"插件收纳隐藏 (%lu 个)", (unsigned long)all.count] : @"插件收纳隐藏";
-    c.detailTextLabel.text = self.pluginFolded ? @"点击展开" : @"点击收起";
-    c.selectionStyle = UITableViewCellSelectionStyleDefault;
+    // S3: 关于
+    if (ip.row == 0) { c.textLabel.text = @"作者"; c.detailTextLabel.text = @"Cc"; c.accessoryType = UITableViewCellAccessoryDisclosureIndicator; c.selectionStyle = UITableViewCellSelectionStyleDefault; }
+    else if (ip.row == 1) { c.textLabel.text = @"声明"; c.detailTextLabel.text = @"仅供自己使用学习交流"; }
+    else if (ip.row == 2) { c.textLabel.text = @"自动登录"; c.detailTextLabel.text = @"电脑登录自动确认";
+        c.accessoryView = [self sw:kAutoLoginKey]; [(UISwitch *)c.accessoryView addTarget:self action:@selector(toggleLogin:) forControlEvents:UIControlEventValueChanged];
+    }
+    else { c.textLabel.text = @"版本"; c.detailTextLabel.text = @"1.0.0（连点5次复制wxid）"; }
     return c;
 }
 
-- (void)toggleDuang:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kDuangKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
-- (void)toggleGameCheat:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kGameCheatKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
-- (void)toggleAdBlock:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kAdBlockKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
-- (void)toggleMsgFilter:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kMsgFilterKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
-- (void)toggleAutoLogin:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kAutoLoginKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
-- (void)toggleScreenShot:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kScreenShotHide]; [[NSUserDefaults standardUserDefaults] synchronize]; }
-- (void)toggleNoSep:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kNoSeparator]; [[NSUserDefaults standardUserDefaults] synchronize]; }
-- (void)toggleHideDND:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kHideDNDIcon]; [[NSUserDefaults standardUserDefaults] synchronize]; }
-- (void)toggleSwipeInput:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kSwipeInput]; [[NSUserDefaults standardUserDefaults] synchronize]; }
+// ---- toggle actions ----
+- (void)toggleDuang:(UISwitch *)s  { [self setKey:kDuangKey val:s.isOn]; }
+- (void)toggleGCheat:(UISwitch *)s { [self setKey:kGameCheatKey val:s.isOn]; }
+- (void)toggleAd:(UISwitch *)s      { [self setKey:kAdBlockKey val:s.isOn]; }
+- (void)toggleFilter:(UISwitch *)s  { [self setKey:kMsgFilterKey val:s.isOn]; }
+- (void)toggleLogin:(UISwitch *)s   { [self setKey:kAutoLoginKey val:s.isOn]; }
+- (void)toggleShot:(UISwitch *)s    { [self setKey:kScreenShotHide val:s.isOn]; }
+- (void)toggleSep:(UISwitch *)s     { [self setKey:kNoSeparator val:s.isOn]; }
+- (void)toggleDND:(UISwitch *)s     { [self setKey:kHideDNDIcon val:s.isOn]; }
+- (void)toggleSwipe:(UISwitch *)s   { [self setKey:kSwipeInput val:s.isOn]; }
 
 - (void)togglePlugin:(UISwitch *)s {
-    NSArray *all = allPlugins();
-    NSInteger idx = s.tag;
-    if (idx >= all.count) return;
+    NSArray *a = allPlugins();
+    if (s.tag >= a.count) return;
     NSMutableArray *blk = [blockedPlugins() mutableCopy];
-    NSString *title = all[idx];
-    if (s.isOn) [blk removeObject:title];
-    else if (![blk containsObject:title]) [blk addObject:title];
-    [[NSUserDefaults standardUserDefaults] setObject:[blk componentsJoinedByString:@","] forKey:kPluginBlockKey];
-    [[NSUserDefaults standardUserDefaults] synchronize];
+    NSString *t = a[s.tag];
+    if (s.isOn) [blk removeObject:t]; else if (![blk containsObject:t]) [blk addObject:t];
+    [self setObj:[blk componentsJoinedByString:@","] forKey:kPluginBlockKey];
 }
 
 @end
