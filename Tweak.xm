@@ -808,7 +808,19 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
     };
 }
 
-// UIView hook removed — modifying corners during didMoveToSuperview caused infinite layout recursion
+// InputToolContainerView 圆角
+@interface InputToolContainerView : UIView
+@end
+%hook InputToolContainerView
+- (void)didMoveToSuperview {
+    %orig;
+    if ([roundEnabledClasses() containsObject:NSStringFromClass(self.class)]) {
+        self.layer.cornerRadius = roundRadius(NSStringFromClass(self.class));
+        self.clipsToBounds = YES;
+        self.layer.maskedCorners = kCALayerMinXMinYCorner | kCALayerMaxXMinYCorner;
+    }
+}
+%end
 
 // 圆角管理页
 @implementation WxCraftRoundVC
