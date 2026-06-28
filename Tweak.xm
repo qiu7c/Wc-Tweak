@@ -799,17 +799,21 @@ static NSArray<NSString *> *hiddenCards(void) {
 - (void)addCell:(id)cell;
 @end
 
-%hook WCTableViewSectionManager
-- (void)addCell:(id)cell {
+%hook WCTableViewNormalCellManager
++ (id)normalCellForSel:(SEL)sel target:(id)target title:(NSString *)title accessoryType:(int)type {
     NSArray *names = hiddenCards();
-    if (names.count && [cell respondsToSelector:@selector(title)]) {
-        NSString *t = [cell title];
-        if (!t.length && [cell respondsToSelector:@selector(m_title)]) t = [cell m_title];
-        for (NSString *name in names) {
-            if (t.length && [t containsString:name]) return;
-        }
+    for (NSString *name in names) {
+        if (title.length && [title containsString:name]) return nil;
     }
-    %orig;
+    return %orig;
+}
+
++ (id)normalCellForSel:(SEL)sel target:(id)target title:(NSString *)title rightValue:(NSString *)right accessoryType:(int)type {
+    NSArray *names = hiddenCards();
+    for (NSString *name in names) {
+        if (title.length && [title containsString:name]) return nil;
+    }
+    return %orig;
 }
 %end
 
