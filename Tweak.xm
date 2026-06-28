@@ -54,14 +54,15 @@ static CGFloat dpiScale(void) {
 
 static void applyDPI(void) {
     CGFloat s = dpiScale();
-    if (s >= 1.0) return;
     UIWindow *kw = nil;
     for (UIWindowScene *sc in [UIApplication sharedApplication].connectedScenes) {
         if (sc.activationState == UISceneActivationStateForegroundActive) {
             kw = sc.windows.firstObject; break;
         }
     }
-    if (kw) kw.layer.transform = CATransform3DMakeScale(s, s, 1);
+    if (!kw) return;
+    // 只缩放 rootViewController 的内容，不缩放 window 本身（避免黑边）
+    kw.rootViewController.view.transform = (s < 1.0) ? CGAffineTransformMakeScale(s, s) : CGAffineTransformIdentity;
 }
 static NSArray<NSString *> *filterKeywords(void);
 static UIWindow *topWindow(void) {
