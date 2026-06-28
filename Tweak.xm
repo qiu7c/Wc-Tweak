@@ -309,7 +309,7 @@ static UIWindow *topWindow(void) {
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.title = @"WxCraft";
-    self.view.backgroundColor = [UIColor systemGroupedBackgroundColor];
+    self.view.backgroundColor = [UIColor whiteColor];
     self.pluginFolded = YES;
 
     // 头像名片卡片
