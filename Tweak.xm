@@ -349,9 +349,7 @@ static UIWindow *topWindow(void) {
         }
     });
 
-    self.tv = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStylePlain];
-    self.tv.separatorStyle = UITableViewCellSeparatorStyleNone;
-    self.tv.backgroundColor = [UIColor systemGroupedBackgroundColor];
+    self.tv = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleInsetGrouped];
     self.tv.delegate = self; self.tv.dataSource = self;
     self.tv.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     self.tv.tableHeaderView = header;
@@ -384,44 +382,11 @@ static UIWindow *topWindow(void) {
     return 3;              // 关于
 }
 
-- (CGFloat)tableView:(UITableView *)tv heightForHeaderInSection:(NSInteger)s { return 44; }
-- (CGFloat)tableView:(UITableView *)tv heightForFooterInSection:(NSInteger)s { return 4; }
-
-- (UIView *)tableView:(UITableView *)tv viewForHeaderInSection:(NSInteger)s {
-    UIView *v = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tv.frame.size.width, 44)];
-    UILabel *l = [[UILabel alloc] initWithFrame:CGRectMake(16, 20, tv.frame.size.width - 32, 20)];
-    l.font = [UIFont systemFontOfSize:13 weight:UIFontWeightSemibold];
-    l.textColor = [UIColor secondaryLabelColor];
-    if (s == 0) l.text = @"聊天增强";
-    else if (s == 1) l.text = @"界面";
-    else if (s == 2) l.text = @"插件收纳";
-    else l.text = @"关于";
-    [v addSubview:l];
-    return v;
-}
-
-- (void)tableView:(UITableView *)tv willDisplayCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)ip {
-    cell.backgroundColor = [UIColor clearColor];
-    cell.contentView.backgroundColor = [UIColor whiteColor];
-    cell.contentView.layer.cornerRadius = 0;
-    cell.contentView.layer.maskedCorners = 0;
-    cell.contentView.clipsToBounds = NO;
-    cell.contentView.frame = CGRectMake(16, 0, tv.frame.size.width - 32, cell.contentView.frame.size.height);
-
-    NSInteger rows = [self tableView:tv numberOfRowsInSection:ip.section];
-    if (rows == 1) {
-        cell.contentView.layer.cornerRadius = 14;
-        cell.contentView.layer.maskedCorners = kCALayerMinXMinYCorner | kCALayerMaxXMinYCorner | kCALayerMinXMaxYCorner | kCALayerMaxXMaxYCorner;
-        cell.contentView.clipsToBounds = YES;
-    } else if (ip.row == 0) {
-        cell.contentView.layer.cornerRadius = 14;
-        cell.contentView.layer.maskedCorners = kCALayerMinXMinYCorner | kCALayerMaxXMinYCorner;
-        cell.contentView.clipsToBounds = YES;
-    } else if (ip.row == rows - 1) {
-        cell.contentView.layer.cornerRadius = 14;
-        cell.contentView.layer.maskedCorners = kCALayerMinXMaxYCorner | kCALayerMaxXMaxYCorner;
-        cell.contentView.clipsToBounds = YES;
-    }
+- (NSString *)tableView:(UITableView *)tv titleForHeaderInSection:(NSInteger)s {
+    if (s == 0) return @"聊天增强";
+    if (s == 1) return @"界面";
+    if (s == 2) return @"插件收纳";
+    return @"关于";
 }
 
 - (void)tableView:(UITableView *)tv didSelectRowAtIndexPath:(NSIndexPath *)ip {
