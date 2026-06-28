@@ -53,6 +53,7 @@ static BOOL pref(NSString *key) {
 static NSArray<NSString *> *filterKeywords(void);
 static NSSet<NSString *> *roundEnabledClasses(void);
 static NSDictionary<NSString *, NSString *> *roundElements(void);
+static BOOL isSeparatorView(UIView *v);
 
 static UIWindow *topWindow(void) {
     for (UIWindowScene *sc in [UIApplication sharedApplication].connectedScenes)
