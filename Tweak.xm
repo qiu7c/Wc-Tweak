@@ -784,6 +784,10 @@ static BOOL shouldFilterMsg(CMessageWrap *wrap) {
 // 输入框左滑清除 / 右滑粘贴
 // ============================================================
 
+@interface MMGrowTextView : UITextView
+@property (nonatomic, copy) NSString *text;
+@end
+
 %hook MMGrowTextView
 - (void)didMoveToSuperview {
     %orig;
