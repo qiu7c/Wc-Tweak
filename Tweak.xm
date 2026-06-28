@@ -6,13 +6,6 @@
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
 
-// WCPluginsMgr 接口声明
-@interface WCPluginsMgr : NSObject
-+ (instancetype)sharedInstance;
-- (void)registerControllerWithTitle:(NSString *)title version:(NSString *)version controller:(NSString *)controller;
-- (void)registerSwitchWithTitle:(NSString *)title key:(NSString *)key;
-@end
-
 // ============================================================
 // 设置页面
 // ============================================================
@@ -78,11 +71,13 @@
 // ============================================================
 
 %ctor {
-    if (NSClassFromString(@"WCPluginsMgr")) {
-        [[WCPluginsMgr sharedInstance]
-            registerControllerWithTitle:@"ForeignAppEnhancer"
-            version:@"1.0.0"
-            controller:@"ForeignSettingsVC"];
+    Class mgr = NSClassFromString(@"WCPluginsMgr");
+    if (mgr) {
+        id instance = [mgr performSelector:@selector(sharedInstance)];
+        [instance performSelector:@selector(registerControllerWithTitle:version:controller:)
+                      withObject:@"ForeignAppEnhancer"
+                      withObject:@"1.0.0"
+                      withObject:@"ForeignSettingsVC"];
     }
 }
 
