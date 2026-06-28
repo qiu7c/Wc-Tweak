@@ -11,9 +11,25 @@
 // ============================================================
 // 开关 Key
 // ============================================================
-static NSString * const kDuangKey   = @"WcPlus_Duang";
-static NSString * const kDayNightKey = @"WcPlus_DayNight";
+static NSString * const kDuangKey     = @"WcPlus_Duang";
+static NSString * const kDayNightKey  = @"WcPlus_DayNight";
 static NSString * const kGameCheatKey = @"WcPlus_GameCheat";
+static NSString * const kPluginBlockKey = @"WcPlus_PluginBlock";
+
+// 获取被屏蔽插件列表
+static NSArray<NSString *> *blockedPlugins(void) {
+    NSString *raw = [[NSUserDefaults standardUserDefaults] stringForKey:kPluginBlockKey];
+    if (!raw.length) return @[];
+    return [raw componentsSeparatedByString:@","];
+}
+
+// 检查是否被屏蔽
+static BOOL isPluginBlocked(NSString *title) {
+    for (NSString *name in blockedPlugins()) {
+        if ([title containsString:name] || [name isEqualToString:title]) return YES;
+    }
+    return NO;
+}
 
 static BOOL pref(NSString *key) {
     return [[NSUserDefaults standardUserDefaults] boolForKey:key];
@@ -61,18 +77,56 @@ static BOOL pref(NSString *key) {
 - (void)toggleDayNight:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kDayNightKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 - (void)toggleGameCheat:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kGameCheatKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 
-- (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 2; }
-- (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)s { return s == 0 ? 3 : 1; }
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 3; }
+- (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)s {
+    return s == 0 ? 3 : (s == 1 ? (blockedPlugins().count ?: 1) : 1);
+}
 
 - (CGFloat)tableView:(UITableView *)tv heightForHeaderInSection:(NSInteger)s { return 36; }
-- (CGFloat)tableView:(UITableView *)tv heightForFooterInSection:(NSInteger)s { return 4; }
+
+- (void)tableView:(UITableView *)tv didSelectRowAtIndexPath:(NSIndexPath *)ip {
+    [tv deselectRowAtIndexPath:ip animated:YES];
+    if (ip.section != 1) return;
+    NSArray *list = blockedPlugins();
+    if (ip.row != list.count) return; // only the "+" row
+
+    UIAlertController *ac = [UIAlertController alertControllerWithTitle:@"添加屏蔽插件" message:@"输入要屏蔽的插件名称（支持模糊匹配）" preferredStyle:UIAlertControllerStyleAlert];
+    [ac addTextFieldWithConfigurationHandler:^(UITextField *tf) { tf.placeholder = @"插件名称"; }];
+    [ac addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
+    [ac addAction:[UIAlertAction actionWithTitle:@"屏蔽" style:UIAlertActionStyleDestructive handler:^(UIAlertAction *_) {
+        NSString *name = ac.textFields.firstObject.text;
+        if (!name.length) return;
+        NSMutableArray *arr = [list mutableCopy];
+        [arr addObject:name];
+        NSString *joined = [arr componentsJoinedByString:@","];
+        [[NSUserDefaults standardUserDefaults] setObject:joined forKey:kPluginBlockKey];
+        [[NSUserDefaults standardUserDefaults] synchronize];
+        [tv reloadSections:[NSIndexSet indexSetWithIndex:1] withRowAnimation:UITableViewRowAnimationAutomatic];
+    }]];
+    [self presentViewController:ac animated:YES completion:nil];
+}
+
+- (BOOL)tableView:(UITableView *)tv canEditRowAtIndexPath:(NSIndexPath *)ip {
+    if (ip.section != 1) return NO;
+    NSArray *list = blockedPlugins();
+    return list.count > 0 && ip.row < list.count;
+}
+
+- (void)tableView:(UITableView *)tv commitEditingStyle:(UITableViewCellEditingStyle)style forRowAtIndexPath:(NSIndexPath *)ip {
+    if (style != UITableViewCellEditingStyleDelete) return;
+    NSMutableArray *arr = [blockedPlugins() mutableCopy];
+    [arr removeObjectAtIndex:ip.row];
+    [[NSUserDefaults standardUserDefaults] setObject:[arr componentsJoinedByString:@","] forKey:kPluginBlockKey];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+    [tv reloadSections:[NSIndexSet indexSetWithIndex:1] withRowAnimation:UITableViewRowAnimationAutomatic];
+}
 
 - (UIView *)tableView:(UITableView *)tv viewForHeaderInSection:(NSInteger)s {
     UIView *h = [[UIView alloc] init];
     UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(16, 8, tv.frame.size.width-32, 20)];
     lbl.font = [UIFont systemFontOfSize:13 weight:UIFontWeightSemibold];
     lbl.textColor = [UIColor grayColor];
-    lbl.text = (s == 0) ? @"功能" : @"关于";
+    lbl.text = s == 0 ? @"功能" : (s == 1 ? @"插件屏蔽" : @"关于");
     [h addSubview:lbl];
     return h;
 }
@@ -99,6 +153,34 @@ static BOOL pref(NSString *key) {
             cell.textLabel.text = @"游戏作弊";
             cell.detailTextLabel.text = @"骰子/猜拳 想几点就几点";
             cell.accessoryView = self.gameCheatSwitch;
+        }
+        return cell;
+    }
+
+    if (ip.section == 1) {
+        NSArray *list = blockedPlugins();
+        UITableViewCell *cell = [tv dequeueReusableCellWithIdentifier:@"blk"];
+        if (!cell) {
+            cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:@"blk"];
+            cell.textLabel.font = [UIFont systemFontOfSize:14];
+            cell.detailTextLabel.font = [UIFont systemFontOfSize:11];
+            cell.detailTextLabel.textColor = [UIColor grayColor];
+        }
+        if (list.count == 0) {
+            cell.textLabel.text = @"暂无屏蔽插件";
+            cell.detailTextLabel.text = @"被屏蔽的插件不会显示在收纳页";
+            cell.selectionStyle = UITableViewCellSelectionStyleNone;
+            cell.accessoryType = UITableViewCellAccessoryNone;
+        } else if (ip.row == list.count) {
+            cell.textLabel.text = @"＋ 添加屏蔽";
+            cell.detailTextLabel.text = @"";
+            cell.selectionStyle = UITableViewCellSelectionStyleDefault;
+            cell.accessoryType = UITableViewCellAccessoryNone;
+        } else {
+            cell.textLabel.text = list[ip.row];
+            cell.detailTextLabel.text = @"左滑删除";
+            cell.selectionStyle = UITableViewCellSelectionStyleNone;
+            cell.accessoryType = UITableViewCellAccessoryNone;
         }
         return cell;
     }
@@ -230,7 +312,27 @@ static BOOL pref(NSString *key) {
 %end
 
 // ============================================================
-// 注册
+// 插件屏蔽: 阻止黑名单中的插件注册显示
+// ============================================================
+
+@interface WCPluginsMgr : NSObject
++ (instancetype)sharedInstance;
+- (void)registerControllerWithTitle:(NSString *)title version:(NSString *)version controller:(NSString *)controller;
+- (void)registerSwitchWithTitle:(NSString *)title key:(NSString *)key;
+@end
+
+%hook WCPluginsMgr
+- (void)registerControllerWithTitle:(NSString *)title version:(NSString *)version controller:(NSString *)controller {
+    if (!isPluginBlocked(title)) %orig;
+}
+
+- (void)registerSwitchWithTitle:(NSString *)title key:(NSString *)key {
+    if (!isPluginBlocked(title)) %orig;
+}
+%end
+
+// ============================================================
+// 注册 Wc+ 自身
 // ============================================================
 
 %ctor {
