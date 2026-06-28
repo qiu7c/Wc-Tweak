@@ -6,7 +6,6 @@
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
 #import <objc/message.h>
-#import <WebKit/WebKit.h>
 #import "DayNightSwitch.h"
 
 // ============================================================
@@ -405,32 +404,37 @@ static UIWindow *topWindow(void) {
 %end
 
 // ============================================================
-// 去广告: 公众号文章 CSS 注入
+// 去广告
 // ============================================================
 
-static NSString * const kAdBlockCSS = @":root{--adHide:display:none!important}"
-".mpa_ad,.ad_banner,.ad_container,.ad_feedback,#js_ad_area,.rich_media_area_extra,.reward_area,"
-"[class*=ad_],[class*=banner],[id*=ad_],[id*=banner],.bottom_ad,.article_ad,.ad_wrap,.ad-box,"
-".insert_ad,.ad_iframe,.top_ad,.video_ad,.stream_ad,.ad-card,.ad_footer,.ad_header,.ad_tag,"
-".ad-label,.ad-info,.ad-link,.ad_border,.ad_unit,.ad_sponsor,.advertisement,.sponsor_area,"
-".mp-article_ad,.recommend_ad,.wx_ad,.wechat_ad,.shop_ad,.promotion_ad,.feed_ad,.adFeed"
-"{display:none!important}";
+// 朋友圈视频自动播放
+%hook WCFacade
+- (bool)isTimelineVideoSightAutoPlayEnable {
+    if (pref(kAdBlockKey)) return NO;
+    return %orig;
+}
+%end
 
-@interface MMWebViewController : UIViewController
-@property (nonatomic, strong) WKWebView *m_webView;
-- (void)webViewDidFinishLoad:(id)arg1;
+// 视频号 / 朋友圈 / 文章广告
+@interface WCDataItem : NSObject
+- (bool)isVideoAd;
+- (bool)isAd;
 @end
 
-%hook MMWebViewController
-- (void)webViewDidFinishLoad:(id)arg1 {
-    %orig;
-    if (!pref(kAdBlockKey)) return;
-    WKWebView *wv = [self valueForKey:@"m_webView"];
-    if (!wv) wv = [self valueForKey:@"webView"];
-    if (!wv) return;
-    NSString *js = [NSString stringWithFormat:@"(function(){var s=document.createElement('style');s.textContent='%@';document.head.appendChild(s)})()", kAdBlockCSS];
-    [wv evaluateJavaScript:js completionHandler:nil];
-}
+%hook WCDataItem
+- (bool)isVideoAd { if (pref(kAdBlockKey)) return NO; return %orig; }
+- (bool)isAd { if (pref(kAdBlockKey)) return NO; return %orig; }
+%end
+
+// 小程序开屏广告
+@interface WAAppTaskSplashADConfig : NSObject
+- (bool)canShowSplashADWindow;
+- (bool)launchShow;
+@end
+
+%hook WAAppTaskSplashADConfig
+- (bool)canShowSplashADWindow { if (pref(kAdBlockKey)) return NO; return %orig; }
+- (bool)launchShow { if (pref(kAdBlockKey)) return NO; return %orig; }
 %end
 
 // ============================================================
