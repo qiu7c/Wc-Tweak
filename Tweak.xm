@@ -401,22 +401,27 @@ static UIWindow *topWindow(void) {
 }
 
 - (void)tableView:(UITableView *)tv willDisplayCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)ip {
-    cell.backgroundColor = [UIColor whiteColor];
-    // 给每个 section 的第一个和最后一个 cell 加圆角
+    cell.backgroundColor = [UIColor clearColor];
+    cell.contentView.backgroundColor = [UIColor whiteColor];
+    cell.contentView.layer.cornerRadius = 0;
+    cell.contentView.layer.maskedCorners = 0;
+    cell.contentView.clipsToBounds = NO;
+    cell.contentView.frame = CGRectMake(16, 0, tv.frame.size.width - 32, cell.contentView.frame.size.height);
+
     NSInteger rows = [self tableView:tv numberOfRowsInSection:ip.section];
     if (rows == 1) {
-        cell.layer.cornerRadius = 14; cell.layer.maskedCorners = kCALayerMinXMinYCorner | kCALayerMaxXMinYCorner | kCALayerMinXMaxYCorner | kCALayerMaxXMaxYCorner;
-        cell.clipsToBounds = YES;
+        cell.contentView.layer.cornerRadius = 14;
+        cell.contentView.layer.maskedCorners = kCALayerMinXMinYCorner | kCALayerMaxXMinYCorner | kCALayerMinXMaxYCorner | kCALayerMaxXMaxYCorner;
+        cell.contentView.clipsToBounds = YES;
     } else if (ip.row == 0) {
-        cell.layer.cornerRadius = 14; cell.layer.maskedCorners = kCALayerMinXMinYCorner | kCALayerMaxXMinYCorner;
-        cell.clipsToBounds = YES;
+        cell.contentView.layer.cornerRadius = 14;
+        cell.contentView.layer.maskedCorners = kCALayerMinXMinYCorner | kCALayerMaxXMinYCorner;
+        cell.contentView.clipsToBounds = YES;
     } else if (ip.row == rows - 1) {
-        cell.layer.cornerRadius = 14; cell.layer.maskedCorners = kCALayerMinXMaxYCorner | kCALayerMaxXMaxYCorner;
-        cell.clipsToBounds = YES;
-    } else {
-        cell.layer.cornerRadius = 0; cell.clipsToBounds = NO;
+        cell.contentView.layer.cornerRadius = 14;
+        cell.contentView.layer.maskedCorners = kCALayerMinXMaxYCorner | kCALayerMaxXMaxYCorner;
+        cell.contentView.clipsToBounds = YES;
     }
-    cell.separatorInset = (ip.row < rows - 1) ? UIEdgeInsetsMake(0, 16, 0, 16) : UIEdgeInsetsMake(0, 0, 0, tv.bounds.size.width);
 }
 
 - (void)tableView:(UITableView *)tv didSelectRowAtIndexPath:(NSIndexPath *)ip {
