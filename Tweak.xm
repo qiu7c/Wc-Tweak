@@ -958,6 +958,10 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
 // 隐藏免打扰图标
 // ============================================================
 
+@interface UIImageView (WxCraftDND)
+- (void)wxc_checkDND;
+@end
+
 %hook UIImageView
 - (void)didMoveToSuperview {
     %orig;
