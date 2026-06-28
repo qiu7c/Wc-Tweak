@@ -349,7 +349,8 @@ static UIWindow *topWindow(void) {
         }
     });
 
-    self.tv = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleInsetGrouped];
+    self.tv = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleGrouped];
+    self.tv.backgroundColor = [UIColor whiteColor];
     self.tv.delegate = self; self.tv.dataSource = self;
     self.tv.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     self.tv.tableHeaderView = header;
