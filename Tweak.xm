@@ -291,31 +291,11 @@ static UIWindow *topWindow(void) {
     self.view.backgroundColor = [UIColor whiteColor];
     self.pluginFolded = YES;
 
-    self.tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleGrouped];
-    self.tableView.delegate = self;
-    self.tableView.dataSource = self;
-    self.tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-    self.tableView.backgroundColor = [UIColor whiteColor];
-    [self.view addSubview:self.tableView];
-
-    self.duangSwitch = [[UISwitch alloc] init]; self.duangSwitch.on = pref(kDuangKey);
-    [self.duangSwitch addTarget:self action:@selector(toggleDuang:) forControlEvents:UIControlEventValueChanged];
-    self.gameCheatSwitch = [[UISwitch alloc] init]; self.gameCheatSwitch.on = pref(kGameCheatKey);
-    [self.gameCheatSwitch addTarget:self action:@selector(toggleGameCheat:) forControlEvents:UIControlEventValueChanged];
-    self.adBlockSwitch = [[UISwitch alloc] init]; self.adBlockSwitch.on = pref(kAdBlockKey);
-    [self.adBlockSwitch addTarget:self action:@selector(toggleAdBlock:) forControlEvents:UIControlEventValueChanged];
-    self.msgFilterSwitch = [[UISwitch alloc] init]; self.msgFilterSwitch.on = pref(kMsgFilterKey);
-    [self.msgFilterSwitch addTarget:self action:@selector(toggleMsgFilter:) forControlEvents:UIControlEventValueChanged];
-    self.autoLoginSwitch = [[UISwitch alloc] init]; self.autoLoginSwitch.on = pref(kAutoLoginKey);
-    [self.autoLoginSwitch addTarget:self action:@selector(toggleAutoLogin:) forControlEvents:UIControlEventValueChanged];
-    self.screenshotSwitch = [[UISwitch alloc] init]; self.screenshotSwitch.on = pref(kScreenShotHide);
-    [self.screenshotSwitch addTarget:self action:@selector(toggleScreenShot:) forControlEvents:UIControlEventValueChanged];
-    self.noSepSwitch = [[UISwitch alloc] init]; self.noSepSwitch.on = pref(kNoSeparator);
-    [self.noSepSwitch addTarget:self action:@selector(toggleNoSep:) forControlEvents:UIControlEventValueChanged];
-    self.hideDNDSwitch = [[UISwitch alloc] init]; self.hideDNDSwitch.on = pref(kHideDNDIcon);
-    [self.hideDNDSwitch addTarget:self action:@selector(toggleHideDND:) forControlEvents:UIControlEventValueChanged];
-    self.swipeInputSwitch = [[UISwitch alloc] init]; self.swipeInputSwitch.on = pref(kSwipeInput);
-    [self.swipeInputSwitch addTarget:self action:@selector(toggleSwipeInput:) forControlEvents:UIControlEventValueChanged];
+    UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(0, 100, self.view.bounds.size.width, 40)];
+    lbl.text = @"WxCraft 设置页";
+    lbl.textAlignment = NSTextAlignmentCenter;
+    lbl.font = [UIFont systemFontOfSize:20];
+    [self.view addSubview:lbl];
 }
 
 - (void)toggleDuang:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kDuangKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
