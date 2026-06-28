@@ -786,7 +786,8 @@ static CGFloat roundRadius(void) {
 // 支持的元素（类名 → 中文名）
 static NSDictionary<NSString *, NSString *> *roundElements(void) {
     return @{
-        @"MMGrowTextView": @"聊天输入框",
+        @"MMGrowTextView":     @"聊天输入框",
+        @"InputToolViewBar":   @"输入工具栏（上圆角）",
     };
 }
 
@@ -796,8 +797,12 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
     if (!self.superview) return;
     NSString *cls = NSStringFromClass(self.class);
     if ([roundEnabledClasses() containsObject:cls]) {
-        self.layer.cornerRadius = roundRadius();
+        CGFloat r = roundRadius();
+        self.layer.cornerRadius = r;
         self.clipsToBounds = YES;
+        if ([cls isEqualToString:@"InputToolViewBar"]) {
+            self.layer.maskedCorners = kCALayerMinXMinYCorner | kCALayerMaxXMinYCorner;
+        }
     }
 }
 %end
