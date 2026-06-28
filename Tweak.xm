@@ -20,7 +20,6 @@ static NSString * const kAdBlockKey    = @"WxCraft_AdBlock";
 static NSString * const kMsgFilterKey   = @"WxCraft_MsgFilter";
 static NSString * const kMsgFilterKWKey = @"WxCraft_MsgFilterKW";
 static NSString * const kAutoLoginKey   = @"WxCraft_AutoLogin";
-static NSString * const kDPIScaleKey   = @"WxCraft_DPIScale";
 
 static NSArray<NSString *> *blockedPlugins(void) {
     NSString *raw = [[NSUserDefaults standardUserDefaults] stringForKey:kPluginBlockKey];
@@ -45,11 +44,6 @@ static BOOL isPluginBlocked(NSString *title) {
 }
 static BOOL pref(NSString *key) {
     return [[NSUserDefaults standardUserDefaults] boolForKey:key];
-}
-
-static CGFloat dpiScale(void) {
-    CGFloat v = [[NSUserDefaults standardUserDefaults] floatForKey:kDPIScaleKey];
-    return (v >= 0.5 && v <= 1.0) ? v : 1.0;
 }
 
 static NSArray<NSString *> *filterKeywords(void);
@@ -327,7 +321,7 @@ static UIWindow *topWindow(void) {
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 3; }
 
 - (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)s {
-    if (s == 0) return 7;
+    if (s == 0) return 6;
     if (s == 1) return self.pluginFolded ? 1 : (allPlugins().count ? allPlugins().count + 1 : 2);
     return 3;
 }
@@ -360,15 +354,6 @@ static UIWindow *topWindow(void) {
 
 - (void)tableView:(UITableView *)tv didSelectRowAtIndexPath:(NSIndexPath *)ip {
     [tv deselectRowAtIndexPath:ip animated:YES];
-    if (ip.section == 0 && ip.row == 6) {
-        NSArray *scales = @[@"100%", @"95%", @"90%", @"85%", @"80%", @"75%", @"70%"];
-        [WxCraftPicker showWithTitle:@"界面缩放" items:scales handler:^(NSInteger idx) {
-            CGFloat vals[] = {1.0, 0.95, 0.90, 0.85, 0.80, 0.75, 0.70};
-            [[NSUserDefaults standardUserDefaults] setFloat:vals[idx] forKey:kDPIScaleKey];
-            [[NSUserDefaults standardUserDefaults] synchronize];
-            [tv reloadRowsAtIndexPaths:@[ip] withRowAnimation:UITableViewRowAnimationNone];
-        }];
-    }
     if (ip.section == 0 && ip.row == 4) {
         [self.navigationController pushViewController:[[WxCraftKeywordVC alloc] init] animated:YES];
     }
@@ -447,15 +432,7 @@ static UIWindow *topWindow(void) {
         else if (ip.row == 1) { c.textLabel.text = @"日月开关"; c.detailTextLabel.text = @"UISwitch 日月动画样式"; c.accessoryView = self.daynightSwitch; }
         else if (ip.row == 2) { c.textLabel.text = @"游戏作弊"; c.detailTextLabel.text = @"骰子/猜拳可选点数"; c.accessoryView = self.gameCheatSwitch; }
         else if (ip.row == 3) { c.textLabel.text = @"去广告"; c.detailTextLabel.text = @"朋友圈 / 文章 / 小程序"; c.accessoryView = self.adBlockSwitch; }
-        else if (ip.row == 5) { c.textLabel.text = @"自动登录"; c.detailTextLabel.text = @"电脑登录自动确认"; c.accessoryView = self.autoLoginSwitch; }
-        else {
-            c.textLabel.text = @"界面缩放";
-            NSInteger pct = (NSInteger)(dpiScale() * 100);
-            c.detailTextLabel.text = [NSString stringWithFormat:@"%ld%%（重启生效）>", (long)pct];
-            c.accessoryView = nil;
-            c.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
-            c.selectionStyle = UITableViewCellSelectionStyleDefault;
-        }
+        else { c.textLabel.text = @"自动登录"; c.detailTextLabel.text = @"电脑登录自动确认"; c.accessoryView = self.autoLoginSwitch; }
         return c;
     }
     // --- 插件收纳 ---
@@ -762,27 +739,6 @@ static BOOL shouldFilterMsg(CMessageWrap *wrap) {
 - (void)registerSwitchWithTitle:(NSString *)title key:(NSString *)key {
     addToAllPlugins(title);
     if (!isPluginBlocked(title)) %orig;
-}
-%end
-
-// ============================================================
-// 界面缩放: hook UIScreen 修改逻辑分辨率
-// ============================================================
-
-%hook UIScreen
-- (CGRect)bounds {
-    CGFloat s = dpiScale();
-    if (s >= 1.0) return %orig;
-    CGRect orig = %orig;
-    CGFloat m = 1.0 / s;
-    return CGRectMake(0, 0, orig.size.width * m, orig.size.height * m);
-}
-- (CGRect)nativeBounds {
-    CGFloat s = dpiScale();
-    if (s >= 1.0) return %orig;
-    CGRect orig = %orig;
-    CGFloat m = 1.0 / s;
-    return CGRectMake(0, 0, orig.size.width * m, orig.size.height * m);
 }
 %end
 
