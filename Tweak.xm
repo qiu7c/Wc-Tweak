@@ -831,20 +831,7 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
     };
 }
 
-%hook UIView
-- (void)didMoveToSuperview {
-    %orig;
-    if (!self.superview) return;
-
-    // InputToolContainerView 圆角
-    NSString *cls = NSStringFromClass(self.class);
-    if ([cls isEqualToString:@"InputToolContainerView"] && [roundEnabledClasses() containsObject:cls]) {
-        self.layer.cornerRadius = roundRadius(cls);
-        self.clipsToBounds = YES;
-        self.layer.maskedCorners = kCALayerMinXMinYCorner | kCALayerMaxXMinYCorner;
-    }
-}
-%end
+// UIView hook removed — modifying corners during didMoveToSuperview caused infinite layout recursion
 
 // 圆角管理页
 @implementation WxCraftRoundVC
@@ -970,8 +957,10 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
 
 %hook _UITableViewCellSeparatorView
 - (void)didMoveToSuperview {
-    if (pref(kNoSeparator)) { self.hidden = YES; return; }
     %orig;
+    if (pref(kNoSeparator)) {
+        dispatch_async(dispatch_get_main_queue(), ^{ self.hidden = YES; });
+    }
 }
 %end
 
