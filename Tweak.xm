@@ -840,9 +840,7 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
 %hook _UITableViewCellSeparatorView
 - (void)didMoveToSuperview {
     %orig;
-    if (pref(kNoSeparator)) {
-        dispatch_async(dispatch_get_main_queue(), ^{ self.hidden = YES; });
-    }
+    if (pref(kNoSeparator)) self.hidden = YES;
 }
 %end
 
