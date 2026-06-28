@@ -584,6 +584,7 @@ static UIWindow *topWindow(void) {
 @end
 @interface CMessageWrap (GameExt)
 @property (nonatomic, assign) int m_uiGameType;
+@property (nonatomic, copy) NSString *m_nsContent;
 - (void)setM_nsEmoticonMD5:(NSString *)md5;
 - (void)setM_uiGameContent:(int)content;
 @end
