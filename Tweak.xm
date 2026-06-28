@@ -271,6 +271,7 @@ static UIWindow *topWindow(void) {
 // 设置主页
 // ============================================================
 
+@class WxCraftRoundVC;
 @interface WxCraftSettingsVC : UIViewController <UITableViewDelegate, UITableViewDataSource>
 @property (nonatomic, strong) UITableView *tableView;
 @property (nonatomic, strong) UISwitch *duangSwitch, *daynightSwitch, *gameCheatSwitch, *adBlockSwitch, *msgFilterSwitch, *autoLoginSwitch, *screenshotSwitch;
