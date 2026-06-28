@@ -809,6 +809,8 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
 }
 
 // MMGrowTextView 圆角
+@interface MMGrowTextView : UIView
+@end
 %hook MMGrowTextView
 - (void)didMoveToSuperview {
     %orig;
