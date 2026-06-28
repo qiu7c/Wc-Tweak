@@ -45,6 +45,7 @@ static BOOL isPluginBlocked(NSString *title) {
 static BOOL pref(NSString *key) {
     return [[NSUserDefaults standardUserDefaults] boolForKey:key];
 }
+static NSArray<NSString *> *filterKeywords(void);
 static UIWindow *topWindow(void) {
     for (UIWindowScene *sc in [UIApplication sharedApplication].connectedScenes)
         if (sc.activationState == UISceneActivationStateForegroundActive)
@@ -629,6 +630,9 @@ static UIWindow *topWindow(void) {
 - (bool)isVideoAd { if (pref(kAdBlockKey)) return NO; return %orig; }
 - (bool)isAd { if (pref(kAdBlockKey)) return NO; return %orig; }
 %end
+
+@interface WKCompositingView : UIView
+@end
 
 // 公众号文章底部大图广告 (原生层 hook WKCompositingView)
 %hook WKCompositingView
