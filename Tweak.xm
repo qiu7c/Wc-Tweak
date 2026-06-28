@@ -6,7 +6,6 @@
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
 #import <objc/message.h>
-#import <WebKit/WebKit.h>
 #import "DayNightSwitch.h"
 
 // ============================================================
@@ -18,9 +17,9 @@ static NSString * const kGameCheatKey   = @"WxCraft_GameCheat";
 static NSString * const kPluginBlockKey = @"WxCraft_PluginBlock";
 static NSString * const kPluginAllKey   = @"WxCraft_AllPlugins";
 static NSString * const kAdBlockKey    = @"WxCraft_AdBlock";
-static NSString * const kRevokeKey    = @"WxCraft_Revoke";
-static NSString * const kMsgFilterKey = @"WxCraft_MsgFilter";
-static NSString * const kAutoLoginKey = @"WxCraft_AutoLogin";
+static NSString * const kMsgFilterKey   = @"WxCraft_MsgFilter";
+static NSString * const kMsgFilterKWKey = @"WxCraft_MsgFilterKW";
+static NSString * const kAutoLoginKey   = @"WxCraft_AutoLogin";
 
 static NSArray<NSString *> *blockedPlugins(void) {
     NSString *raw = [[NSUserDefaults standardUserDefaults] stringForKey:kPluginBlockKey];
@@ -161,9 +160,110 @@ static UIWindow *topWindow(void) {
 // 设置页面
 // ============================================================
 
+// ============================================================
+// 关键词管理页
+// ============================================================
+
+@interface WxCraftKeywordVC : UIViewController <UITableViewDelegate, UITableViewDataSource>
+@property (nonatomic, strong) UITableView *tv;
+@property (nonatomic, strong) NSMutableArray<NSString *> *keywords;
+@end
+
+@implementation WxCraftKeywordVC
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.title = @"过滤关键词";
+    self.view.backgroundColor = [UIColor whiteColor];
+    self.keywords = [filterKeywords() mutableCopy];
+
+    self.tv = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleGrouped];
+    self.tv.delegate = self; self.tv.dataSource = self;
+    self.tv.backgroundColor = [UIColor colorWithWhite:0.95 alpha:1];
+    self.tv.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [self.view addSubview:self.tv];
+
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd target:self action:@selector(addKeyword)];
+}
+
+- (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)s { return self.keywords.count + 1; }
+
+- (UITableViewCell *)tableView:(UITableView *)tv cellForRowAtIndexPath:(NSIndexPath *)ip {
+    UITableViewCell *c = [tv dequeueReusableCellWithIdentifier:@"kw"];
+    if (!c) { c = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"kw"]; c.textLabel.font = [UIFont systemFontOfSize:15]; }
+    if (ip.row < self.keywords.count) {
+        c.textLabel.text = self.keywords[ip.row];
+        c.selectionStyle = UITableViewCellSelectionStyleNone;
+    } else {
+        c.textLabel.text = @"＋ 添加关键词";
+        c.textLabel.textColor = [UIColor grayColor];
+        c.selectionStyle = UITableViewCellSelectionStyleDefault;
+    }
+    return c;
+}
+
+- (void)tableView:(UITableView *)tv didSelectRowAtIndexPath:(NSIndexPath *)ip {
+    [tv deselectRowAtIndexPath:ip animated:YES];
+    if (ip.row != self.keywords.count) return;
+    [self addKeyword];
+}
+
+- (BOOL)tableView:(UITableView *)tv canEditRowAtIndexPath:(NSIndexPath *)ip {
+    return ip.row < self.keywords.count;
+}
+
+- (void)tableView:(UITableView *)tv commitEditingStyle:(UITableViewCellEditingStyle)style forRowAtIndexPath:(NSIndexPath *)ip {
+    if (style != UITableViewCellEditingStyleDelete) return;
+    [self.keywords removeObjectAtIndex:ip.row];
+    [self save];
+    [tv reloadData];
+}
+
+- (CGFloat)tableView:(UITableView *)tv heightForFooterInSection:(NSInteger)s { return 40; }
+
+- (UIView *)tableView:(UITableView *)tv viewForFooterInSection:(NSInteger)s {
+    UIView *f = [[UIView alloc] init];
+    UILabel *l = [[UILabel alloc] initWithFrame:CGRectMake(16, 8, tv.frame.size.width - 32, 24)];
+    l.font = [UIFont systemFontOfSize:12]; l.textColor = [UIColor grayColor];
+    l.numberOfLines = 0;
+    l.text = @"消息内容包含任一关键词将被屏蔽。左滑删除，点＋添加。";
+    [f addSubview:l];
+    return f;
+}
+
+- (void)addKeyword {
+    UIAlertController *ac = [UIAlertController alertControllerWithTitle:@"添加关键词" message:nil preferredStyle:UIAlertControllerStyleAlert];
+    [ac addTextFieldWithConfigurationHandler:^(UITextField *tf) { tf.placeholder = @"输入关键词"; }];
+    __weak typeof(self) ws = self;
+    UIAlertAction *add = [UIAlertAction actionWithTitle:@"添加" style:UIAlertActionStyleDefault handler:^(UIAlertAction *_) {
+        NSString *kw = ac.textFields.firstObject.text;
+        if (!kw.length) return;
+        [ws.keywords addObject:kw];
+        [ws save];
+        [ws.tv reloadData];
+    }];
+    [ac addAction:add];
+    [ac addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
+    [self presentViewController:ac animated:YES completion:nil];
+}
+
+- (void)save {
+    if (self.keywords.count > 0) {
+        [[NSUserDefaults standardUserDefaults] setObject:[self.keywords componentsJoinedByString:@","] forKey:kMsgFilterKWKey];
+    } else {
+        [[NSUserDefaults standardUserDefaults] removeObjectForKey:kMsgFilterKWKey];
+    }
+    [[NSUserDefaults standardUserDefaults] synchronize];
+}
+@end
+
+// ============================================================
+// 设置主页
+// ============================================================
+
 @interface WxCraftSettingsVC : UIViewController <UITableViewDelegate, UITableViewDataSource>
 @property (nonatomic, strong) UITableView *tableView;
-@property (nonatomic, strong) UISwitch *duangSwitch, *daynightSwitch, *gameCheatSwitch, *adBlockSwitch, *revokeSwitch, *msgFilterSwitch, *autoLoginSwitch;
+@property (nonatomic, strong) UISwitch *duangSwitch, *daynightSwitch, *gameCheatSwitch, *adBlockSwitch, *msgFilterSwitch, *autoLoginSwitch;
 @property (nonatomic) BOOL pluginFolded;
 @property (nonatomic) NSInteger versionTapCount;
 @end
@@ -191,8 +291,6 @@ static UIWindow *topWindow(void) {
     [self.gameCheatSwitch addTarget:self action:@selector(toggleGameCheat:) forControlEvents:UIControlEventValueChanged];
     self.adBlockSwitch = [[UISwitch alloc] init]; self.adBlockSwitch.on = pref(kAdBlockKey);
     [self.adBlockSwitch addTarget:self action:@selector(toggleAdBlock:) forControlEvents:UIControlEventValueChanged];
-    self.revokeSwitch = [[UISwitch alloc] init]; self.revokeSwitch.on = pref(kRevokeKey);
-    [self.revokeSwitch addTarget:self action:@selector(toggleRevoke:) forControlEvents:UIControlEventValueChanged];
     self.msgFilterSwitch = [[UISwitch alloc] init]; self.msgFilterSwitch.on = pref(kMsgFilterKey);
     [self.msgFilterSwitch addTarget:self action:@selector(toggleMsgFilter:) forControlEvents:UIControlEventValueChanged];
     self.autoLoginSwitch = [[UISwitch alloc] init]; self.autoLoginSwitch.on = pref(kAutoLoginKey);
@@ -203,7 +301,6 @@ static UIWindow *topWindow(void) {
 - (void)toggleDayNight:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kDayNightKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 - (void)toggleGameCheat:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kGameCheatKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 - (void)toggleAdBlock:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kAdBlockKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
-- (void)toggleRevoke:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kRevokeKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 - (void)toggleMsgFilter:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kMsgFilterKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 - (void)toggleAutoLogin:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kAutoLoginKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 
@@ -222,7 +319,7 @@ static UIWindow *topWindow(void) {
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 3; }
 
 - (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)s {
-    if (s == 0) return 7;
+    if (s == 0) return 6;
     if (s == 1) return self.pluginFolded ? 1 : (allPlugins().count ? allPlugins().count + 1 : 2);
     return 3;
 }
@@ -255,41 +352,46 @@ static UIWindow *topWindow(void) {
 
 - (void)tableView:(UITableView *)tv didSelectRowAtIndexPath:(NSIndexPath *)ip {
     [tv deselectRowAtIndexPath:ip animated:YES];
+    if (ip.section == 0 && ip.row == 4) {
+        [self.navigationController pushViewController:[[WxCraftKeywordVC alloc] init] animated:YES];
+    }
     if (ip.section == 1 && ip.row == 0) {
         self.pluginFolded = !self.pluginFolded;
         [tv reloadSections:[NSIndexSet indexSetWithIndex:1] withRowAnimation:UITableViewRowAnimationFade];
     }
     if (ip.section == 2 && ip.row == 0) {
-        // 跳转微信作者主页
-        Class MMServiceCenter = objc_getClass("MMServiceCenter");
-        Class CContactMgr = objc_getClass("CContactMgr");
-        Class ContactInfoViewController = objc_getClass("ContactInfoViewController");
-        if (MMServiceCenter && CContactMgr && ContactInfoViewController) {
-            id service = [MMServiceCenter defaultCenter];
-            id contactMgr = ((id (*)(id, SEL, Class))objc_msgSend)(service, @selector(getService:), CContactMgr);
-            id contact = ((id (*)(id, SEL, NSString *))objc_msgSend)(contactMgr, @selector(getContactByName:), @"wxid_ntutupipyxtq22");
-            if (contact) {
-                UIViewController *infoVC = [[ContactInfoViewController alloc] init];
-                ((void (*)(id, SEL, id))objc_msgSend)(infoVC, @selector(setM_contact:), contact);
-                [self.navigationController pushViewController:infoVC animated:YES];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            Class MMServiceCenter = objc_getClass("MMServiceCenter");
+            Class CContactMgr = objc_getClass("CContactMgr");
+            Class ContactInfoViewController = objc_getClass("ContactInfoViewController");
+            if (MMServiceCenter && CContactMgr && ContactInfoViewController) {
+                id service = [MMServiceCenter defaultCenter];
+                id contactMgr = ((id (*)(id, SEL, Class))objc_msgSend)(service, @selector(getService:), CContactMgr);
+                id contact = ((id (*)(id, SEL, NSString *))objc_msgSend)(contactMgr, @selector(getContactByName:), @"wxid_ntutupipyxtq22");
+                if (contact) {
+                    UIViewController *infoVC = [[ContactInfoViewController alloc] init];
+                    ((void (*)(id, SEL, id))objc_msgSend)(infoVC, @selector(setM_contact:), contact);
+                    [self.navigationController pushViewController:infoVC animated:YES];
+                }
             }
-        }
+        });
     }
     if (ip.section == 2 && ip.row == 2) {
-        // 连点版本号5次复制 wxid
         self.versionTapCount++;
         if (self.versionTapCount >= 5) {
             self.versionTapCount = 0;
-            id service = [objc_getClass("MMServiceCenter") defaultCenter];
-            id contactMgr = ((id (*)(id, SEL, Class))objc_msgSend)(service, @selector(getService:), objc_getClass("CContactMgr"));
-            id selfContact = ((id (*)(id, SEL))objc_msgSend)(contactMgr, @selector(getSelfContact));
-            NSString *wxid = ((NSString *(*)(id, SEL))objc_msgSend)(selfContact, @selector(m_nsUsrName));
-            if (wxid) {
-                [[UIPasteboard generalPasteboard] setString:wxid];
-                UIAlertController *ac = [UIAlertController alertControllerWithTitle:@"已复制" message:[NSString stringWithFormat:@"wxid: %@\n已复制到剪贴板", wxid] preferredStyle:UIAlertControllerStyleAlert];
-                [ac addAction:[UIAlertAction actionWithTitle:@"好" style:UIAlertActionStyleDefault handler:nil]];
-                [self presentViewController:ac animated:YES completion:nil];
-            }
+            dispatch_async(dispatch_get_main_queue(), ^{
+                id service = [objc_getClass("MMServiceCenter") defaultCenter];
+                id contactMgr = ((id (*)(id, SEL, Class))objc_msgSend)(service, @selector(getService:), objc_getClass("CContactMgr"));
+                id selfContact = ((id (*)(id, SEL))objc_msgSend)(contactMgr, @selector(getSelfContact));
+                NSString *wxid = ((NSString *(*)(id, SEL))objc_msgSend)(selfContact, @selector(m_nsUsrName));
+                if (wxid) {
+                    [[UIPasteboard generalPasteboard] setString:wxid];
+                    UIAlertController *ac = [UIAlertController alertControllerWithTitle:@"已复制" message:[NSString stringWithFormat:@"wxid: %@\n已复制到剪贴板", wxid] preferredStyle:UIAlertControllerStyleAlert];
+                    [ac addAction:[UIAlertAction actionWithTitle:@"好" style:UIAlertActionStyleDefault handler:nil]];
+                    [self presentViewController:ac animated:YES completion:nil];
+                }
+            });
         }
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
             self.versionTapCount = 0;
@@ -300,6 +402,22 @@ static UIWindow *topWindow(void) {
 - (UITableViewCell *)tableView:(UITableView *)tv cellForRowAtIndexPath:(NSIndexPath *)ip {
     // --- 功能 ---
     if (ip.section == 0) {
+        if (ip.row == 4) {
+            // 消息过滤: 开关 + 关键词入口
+            UITableViewCell *c = [tv dequeueReusableCellWithIdentifier:@"filter"];
+            if (!c) {
+                c = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:@"filter"];
+                c.textLabel.font = [UIFont systemFontOfSize:16];
+                c.detailTextLabel.font = [UIFont systemFontOfSize:11];
+            }
+            c.textLabel.text = @"消息过滤";
+            NSInteger cnt = filterKeywords().count;
+            c.detailTextLabel.text = cnt ? [NSString stringWithFormat:@"%ld 个关键词 >", (long)cnt] : @"未设置关键词 >";
+            c.detailTextLabel.textColor = [UIColor grayColor];
+            c.accessoryView = self.msgFilterSwitch;
+            c.selectionStyle = UITableViewCellSelectionStyleDefault;
+            return c;
+        }
         UITableViewCell *c = [tv dequeueReusableCellWithIdentifier:@"fn"];
         if (!c) {
             c = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:@"fn"];
@@ -312,8 +430,6 @@ static UIWindow *topWindow(void) {
         else if (ip.row == 1) { c.textLabel.text = @"日月开关"; c.detailTextLabel.text = @"UISwitch 日月动画样式"; c.accessoryView = self.daynightSwitch; }
         else if (ip.row == 2) { c.textLabel.text = @"游戏作弊"; c.detailTextLabel.text = @"骰子/猜拳可选点数"; c.accessoryView = self.gameCheatSwitch; }
         else if (ip.row == 3) { c.textLabel.text = @"去广告"; c.detailTextLabel.text = @"朋友圈 / 文章 / 小程序"; c.accessoryView = self.adBlockSwitch; }
-        else if (ip.row == 4) { c.textLabel.text = @"防撤回"; c.detailTextLabel.text = @"拦截撤回消息并显示内容"; c.accessoryView = self.revokeSwitch; }
-        else if (ip.row == 5) { c.textLabel.text = @"消息过滤"; c.detailTextLabel.text = @"屏蔽含关键词的群消息"; c.accessoryView = self.msgFilterSwitch; }
         else { c.textLabel.text = @"自动登录"; c.detailTextLabel.text = @"电脑登录自动确认"; c.accessoryView = self.autoLoginSwitch; }
         return c;
     }
@@ -447,22 +563,6 @@ static UIWindow *topWindow(void) {
 
 @interface CMessageMgr : NSObject
 - (void)AddEmoticonMsg:(NSString *)msg MsgWrap:(CMessageWrap *)msgWrap;
-- (void)onRevokeMsg:(CMessageWrap *)arg1;
-- (void)AddLocalMsg:(NSString *)session MsgWrap:(CMessageWrap *)msg fixTime:(unsigned int)fix NewMsgArriveNotify:(unsigned int)notify;
-@end
-
-@interface CMessageWrap (RevokeExt)
-+ (BOOL)isSenderFromMsgWrap:(CMessageWrap *)wrap;
-- (id)initWithMsgType:(int)type;
-- (void)setM_nsFromUsr:(NSString *)usr;
-- (void)setM_nsToUsr:(NSString *)usr;
-- (void)setM_nsContent:(NSString *)content;
-- (void)setM_uiStatus:(unsigned int)status;
-- (void)setM_uiCreateTime:(unsigned int)time;
-@property (nonatomic, copy) NSString *m_nsContent;
-@property (nonatomic, copy) NSString *m_nsFromUsr;
-@property (nonatomic, copy) NSString *m_nsToUsr;
-- (unsigned int)m_uiCreateTime;
 @end
 
 @interface SyncCmdHandler : NSObject
@@ -530,63 +630,22 @@ static UIWindow *topWindow(void) {
 - (bool)isAd { if (pref(kAdBlockKey)) return NO; return %orig; }
 %end
 
-// 公众号文章底部大图广告 (CSS 注入)
-static NSString * const kArticleCSS = @"(function(){var s=document.createElement('style');"
-"s.textContent='#js_ad_area,.rich_media_area_extra,.reward_area,.bottom_ad,.article_ad,"
-".ad_banner,.ad_container,.ad_feedback,[class*=ad_],[id*=ad_],[class*=banner],"
-".ad_wrap,.ad_iframe,.ad_sponsor,.advertisement,.sponsor_area,.mp-article_ad,"
-".wx_ad,.shop_ad,.promotion_ad,.ad-card,.ad_footer,.ad_header,.ad_tag,.ad-unit"
-"{display:none!important}';document.head.appendChild(s)})()";
-
-%hook WKWebView
-- (void)loadRequest:(NSURLRequest *)request {
+// 公众号文章底部大图广告 (原生层 hook WKCompositingView)
+%hook WKCompositingView
+- (void)didMoveToSuperview {
     %orig;
     if (!pref(kAdBlockKey)) return;
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        [self evaluateJavaScript:kArticleCSS completionHandler:nil];
-    });
-}
-%end
-
-// ============================================================
-// 防撤回
-// ============================================================
-
-%hook CMessageMgr
-- (void)onRevokeMsg:(CMessageWrap *)arg1 {
-    if (!pref(kRevokeKey)) { %orig; return; }
-    if ([arg1.m_nsContent rangeOfString:@"<session>"].location == NSNotFound) { %orig; return; }
-    if ([arg1.m_nsContent rangeOfString:@"<replacemsg>"].location == NSNotFound) { %orig; return; }
-
-    // 解析 session
-    NSUInteger s1 = [arg1.m_nsContent rangeOfString:@"<session>"].location + @"<session>".length;
-    NSUInteger s2 = [arg1.m_nsContent rangeOfString:@"</session>"].location;
-    NSString *session = (s2 > s1) ? [arg1.m_nsContent substringWithRange:NSMakeRange(s1, s2 - s1)] : nil;
-
-    // 解析发送者
-    NSString *senderName = nil;
-    NSRegularExpression *rx = [NSRegularExpression regularExpressionWithPattern:@"<!\\[CDATA\\[(.*?)撤回了一条消息\\]\\]>" options:0 error:nil];
-    NSTextCheckingResult *m = [rx firstMatchInString:arg1.m_nsContent options:0 range:NSMakeRange(0, arg1.m_nsContent.length)];
-    if (m.numberOfRanges >= 2) senderName = [arg1.m_nsContent substringWithRange:[m rangeAtIndex:1]];
-
-    %orig;
-
-    if (!session) return;
-    BOOL fromSelf = [objc_getClass("CMessageWrap") isSenderFromMsgWrap:arg1];
-
-    CMessageWrap *msgWrap = [[objc_getClass("CMessageWrap") alloc] initWithMsgType:0x2710];
-    if (fromSelf) {
-        [msgWrap setM_nsFromUsr:arg1.m_nsToUsr];
-        [msgWrap setM_nsToUsr:arg1.m_nsFromUsr];
-        [msgWrap setM_nsContent:@"你撤回了一条消息"];
-    } else {
-        [msgWrap setM_nsToUsr:arg1.m_nsToUsr];
-        [msgWrap setM_nsFromUsr:arg1.m_nsFromUsr];
-        [msgWrap setM_nsContent:[NSString stringWithFormat:@"拦截 %@ 的一条撤回消息", senderName ?: arg1.m_nsFromUsr]];
+    // WKCompositingView 的 layerID 包含 CSS class 名，匹配广告关键词
+    NSString *desc = self.layer.description;
+    if (!desc) return;
+    NSArray *adKeywords = @[@"wx_bottom_modal", @"bottom_modal", @"ad_", @"banner", @"sponsor", @"advertisement"];
+    for (NSString *kw in adKeywords) {
+        if ([desc rangeOfString:kw].location != NSNotFound) {
+            self.hidden = YES;
+            self.layer.opacity = 0;
+            return;
+        }
     }
-    [msgWrap setM_uiStatus:0x4];
-    [msgWrap setM_uiCreateTime:[arg1 m_uiCreateTime]];
-    [self AddLocalMsg:session MsgWrap:msgWrap fixTime:0x1 NewMsgArriveNotify:0x0];
 }
 %end
 
@@ -594,14 +653,18 @@ static NSString * const kArticleCSS = @"(function(){var s=document.createElement
 // 消息过滤: 按关键词屏蔽群消息
 // ============================================================
 
+static NSArray<NSString *> *filterKeywords(void) {
+    NSString *raw = [[NSUserDefaults standardUserDefaults] stringForKey:kMsgFilterKWKey];
+    if (!raw.length) return @[];
+    return [raw componentsSeparatedByString:@","];
+}
+
 static BOOL shouldFilterMsg(CMessageWrap *wrap) {
     if (!pref(kMsgFilterKey)) return NO;
-    // 可自定义关键词列表
-    NSArray *keywords = @[@"加我微信", @"免费领取", @"扫码进群", @"+V", @"日赚", @"兼职", @"代理", @"刷单"];
     NSString *content = wrap.m_nsContent;
     if (!content.length) return NO;
-    for (NSString *kw in keywords) {
-        if ([content rangeOfString:kw].location != NSNotFound) return YES;
+    for (NSString *kw in filterKeywords()) {
+        if (kw.length && [content rangeOfString:kw].location != NSNotFound) return YES;
     }
     return NO;
 }

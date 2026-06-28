@@ -16,6 +16,6 @@ TWEAK_NAME = WxCraft
 # 源文件
 WxCraft_FILES = Tweak.xm DayNightSwitch.m
 WxCraft_CFLAGS = -fobjc-arc
-WxCraft_FRAMEWORKS = UIKit Foundation QuartzCore WebKit
+WxCraft_FRAMEWORKS = UIKit Foundation QuartzCore
 
 include $(THEOS_MAKE_PATH)/tweak.mk
