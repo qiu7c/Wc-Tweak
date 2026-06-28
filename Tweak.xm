@@ -266,7 +266,7 @@ static UIWindow *topWindow(void) {
         Class ContactInfoViewController = objc_getClass("ContactInfoViewController");
         if (MMServiceCenter && CContactMgr && ContactInfoViewController) {
             id service = [MMServiceCenter defaultCenter];
-            id contactMgr = [service getService:CContactMgr];
+            id contactMgr = ((id (*)(id, SEL, Class))objc_msgSend)(service, @selector(getService:), CContactMgr);
             id contact = ((id (*)(id, SEL, NSString *))objc_msgSend)(contactMgr, @selector(getContactByName:), @"wxid_ntutupipyxtq22");
             if (contact) {
                 UIViewController *infoVC = [[ContactInfoViewController alloc] init];
@@ -281,7 +281,7 @@ static UIWindow *topWindow(void) {
         if (self.versionTapCount >= 5) {
             self.versionTapCount = 0;
             id service = [objc_getClass("MMServiceCenter") defaultCenter];
-            id contactMgr = [service getService:objc_getClass("CContactMgr")];
+            id contactMgr = ((id (*)(id, SEL, Class))objc_msgSend)(service, @selector(getService:), objc_getClass("CContactMgr"));
             id selfContact = ((id (*)(id, SEL))objc_msgSend)(contactMgr, @selector(getSelfContact));
             NSString *wxid = ((NSString *(*)(id, SEL))objc_msgSend)(selfContact, @selector(m_nsUsrName));
             if (wxid) {
