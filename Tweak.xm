@@ -312,7 +312,6 @@ static UIWindow *topWindow(void) {
 
 
 // ---- TableView ----
-- (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 4; }
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 4; }
 
