@@ -799,35 +799,31 @@ static NSArray<NSString *> *hiddenCards(void) {
 - (void)addCell:(id)cell;
 @end
 
-// Hook TextStateProfileTableView → 强制刷新 + 隐藏匹配 Cell
-@interface TextStateProfileTableView : UITableView
-@end
-
-%hook TextStateProfileTableView
-- (void)reloadData {
+// 隐藏底部卡片: hook MMTableViewCell + cellInfo
+%hook MMTableViewCell
+- (void)didMoveToSuperview {
     %orig;
-    dispatch_async(dispatch_get_main_queue(), ^{
-        NSArray *names = hiddenCards();
-        if (!names.count) return;
-        for (UITableViewCell *cell in [self visibleCells]) {
-            for (UIView *sub in cell.subviews) {
-                if ([sub isKindOfClass:[UILabel class]]) {
-                    NSString *t = [(UILabel *)sub text];
-                    BOOL matched = NO;
-                    for (NSString *name in names) {
-                        if (t.length && [t containsString:name]) { matched = YES; break; }
+    NSArray *names = hiddenCards();
+    if (!names.count) return;
+    // 递归搜索 UILabel
+    for (UIView *sub in self.contentView.subviews) {
+        if ([sub isKindOfClass:[UILabel class]]) {
+            NSString *t = [(UILabel *)sub text];
+            for (NSString *name in names) {
+                if (t.length && [t containsString:name]) {
+                    id info = [self valueForKey:@"cellInfo"];
+                    if (info) {
+                        @try { [info setValue:@0 forKey:@"m_height"]; } @catch(id e){}
+                        @try { [info setValue:@0 forKey:@"height"]; } @catch(id e){}
+                        @try { [info setValue:@0 forKey:@"cellHeight"]; } @catch(id e){}
                     }
-                    if (matched) {
-                        cell.hidden = YES;
-                        cell.alpha = 0;
-                    }
-                    break;
+                    self.hidden = YES;
+                    self.alpha = 0;
+                    return;
                 }
             }
         }
-        [self beginUpdates];
-        [self endUpdates];
-    });
+    }
 }
 %end
 
