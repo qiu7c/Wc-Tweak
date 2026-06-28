@@ -5,6 +5,7 @@
 #import <UIKit/UIKit.h>
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
+#import <objc/message.h>
 
 // ============================================================
 // 设置页面
@@ -73,11 +74,14 @@
 %ctor {
     Class mgr = NSClassFromString(@"WCPluginsMgr");
     if (mgr) {
-        id instance = [mgr performSelector:@selector(sharedInstance)];
-        [instance performSelector:@selector(registerControllerWithTitle:version:controller:)
-                      withObject:@"ForeignAppEnhancer"
-                      withObject:@"1.0.0"
-                      withObject:@"ForeignSettingsVC"];
+        id instance = ((id (*)(id, SEL))objc_msgSend)(mgr, @selector(sharedInstance));
+        ((void (*)(id, SEL, NSString *, NSString *, NSString *))objc_msgSend)(
+            instance,
+            @selector(registerControllerWithTitle:version:controller:),
+            @"ForeignAppEnhancer",
+            @"1.0.0",
+            @"ForeignSettingsVC"
+        );
     }
 }
 
