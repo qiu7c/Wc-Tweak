@@ -54,7 +54,6 @@ static NSArray<NSString *> *filterKeywords(void);
 static NSSet<NSString *> *roundEnabledClasses(void);
 static NSDictionary<NSString *, NSString *> *roundElements(void);
 static CGFloat roundRadius(NSString *cls);
-static BOOL isSeparatorView(UIView *v);
 
 static UIWindow *topWindow(void) {
     for (UIWindowScene *sc in [UIApplication sharedApplication].connectedScenes)
@@ -837,13 +836,7 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
     %orig;
     if (!self.superview) return;
 
-    // 全局分割线隐藏
-    if (pref(kNoSeparator) && ![self isKindOfClass:[UITableViewCell class]] && isSeparatorView(self)) {
-        self.hidden = YES;
-        return;
-    }
-
-        // 通用圆角逻辑 (仅 InputToolContainerView 走这里)
+    // InputToolContainerView 圆角
     NSString *cls = NSStringFromClass(self.class);
     if ([cls isEqualToString:@"InputToolContainerView"] && [roundEnabledClasses() containsObject:cls]) {
         self.layer.cornerRadius = roundRadius(cls);
@@ -974,19 +967,6 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
 @interface _UITableViewCellSeparatorView : UIView
 @end
 
-static BOOL isSeparatorView(UIView *v) {
-    CGFloat h = v.frame.size.height;
-    CGFloat w = v.frame.size.width;
-    CGFloat pw = v.superview.frame.size.width;
-    // 薄条型：高度 ≤ 3px，宽度接近父视图
-    if (h > 0 && h <= 3 && w >= pw - 10 && w >= pw * 0.8) return YES;
-    // 类名含 Separator / Divider
-    NSString *cls = NSStringFromClass(v.class);
-    if ([cls containsString:@"Separator"] || [cls containsString:@"Divider"]) return YES;
-    // UIVisualEffectView 做的分割线（渐变模糊条）
-    if (h > 0 && h <= 3 && [v isKindOfClass:[UIVisualEffectView class]]) return YES;
-    return NO;
-}
 
 %hook _UITableViewCellSeparatorView
 - (void)didMoveToSuperview {
