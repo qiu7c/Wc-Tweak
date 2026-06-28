@@ -787,27 +787,27 @@ static NSArray<NSString *> *hiddenCards(void) {
 @interface MMTableViewCell : UITableViewCell
 @end
 
-static BOOL findAndHideLabel(UIView *root, NSArray<NSString *> *names) {
-    for (UIView *sub in root.subviews) {
-        if ([sub isKindOfClass:[UILabel class]]) {
-            NSString *text = [(UILabel *)sub text];
-            for (NSString *name in names) {
-                if (text.length && [text containsString:name]) return YES;
-            }
-        }
-        if (findAndHideLabel(sub, names)) return YES;
-    }
-    return NO;
-}
+// Hook 数据源层: 阻止隐藏的卡片被添加到 Section
+@interface WCTableViewNormalCellManager : NSObject
+@property (nonatomic, copy) NSString *title;
+@property (nonatomic, copy) NSString *m_title;
+- (id)cellForSel:(SEL)sel target:(id)target;
+@end
 
-%hook MMTableViewCell
-- (void)setFrame:(CGRect)frame {
+@interface WCTableViewSectionManager : NSObject
++ (id)sectionInfoDefaut;
+- (void)addCell:(id)cell;
+@end
+
+%hook WCTableViewSectionManager
+- (void)addCell:(WCTableViewNormalCellManager *)cell {
     NSArray *names = hiddenCards();
-    if (names.count && findAndHideLabel(self, names)) {
-        %orig(CGRectMake(frame.origin.x, frame.origin.y, frame.size.width, 0));
-        self.hidden = YES;
-        self.alpha = 0;
-        return;
+    if (names.count && [cell respondsToSelector:@selector(title)]) {
+        NSString *t = cell.title;
+        if (!t.length && [cell respondsToSelector:@selector(m_title)]) t = cell.m_title;
+        for (NSString *name in names) {
+            if (t.length && [t containsString:name]) return; // skip this cell
+        }
     }
     %orig;
 }
