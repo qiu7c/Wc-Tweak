@@ -183,22 +183,39 @@ static UIWindow *topWindow(void) {
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.title = @"过滤关键词";
+    self.title = @"消息过滤";
     self.view.backgroundColor = [UIColor whiteColor];
     self.keywords = [filterKeywords() mutableCopy];
 
-    self.tv = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleGrouped];
+    self.tv = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleInsetGrouped];
     self.tv.delegate = self; self.tv.dataSource = self;
-    self.tv.backgroundColor = [UIColor colorWithWhite:0.95 alpha:1];
     self.tv.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     [self.view addSubview:self.tv];
 
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd target:self action:@selector(addKeyword)];
 }
 
-- (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)s { return self.keywords.count + 1; }
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 2; }
+
+- (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)s {
+    return s == 0 ? 1 : (self.keywords.count + 1);
+}
+
+- (NSString *)tableView:(UITableView *)tv titleForHeaderInSection:(NSInteger)s {
+    if (s == 0) return nil;
+    return self.keywords.count ? [NSString stringWithFormat:@"已设 %lu 个关键词", (unsigned long)self.keywords.count] : @"暂无关键词";
+}
 
 - (UITableViewCell *)tableView:(UITableView *)tv cellForRowAtIndexPath:(NSIndexPath *)ip {
+    if (ip.section == 0) {
+        UITableViewCell *c = [tv dequeueReusableCellWithIdentifier:@"sw"];
+        if (!c) { c = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"sw"]; c.textLabel.font = [UIFont systemFontOfSize:16]; c.selectionStyle = UITableViewCellSelectionStyleNone; }
+        c.textLabel.text = @"启用消息过滤";
+        UISwitch *sw = [[UISwitch alloc] init]; sw.on = pref(kMsgFilterKey);
+        [sw addTarget:self action:@selector(toggleFilter:) forControlEvents:UIControlEventValueChanged];
+        c.accessoryView = sw;
+        return c;
+    }
     UITableViewCell *c = [tv dequeueReusableCellWithIdentifier:@"kw"];
     if (!c) { c = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"kw"]; c.textLabel.font = [UIFont systemFontOfSize:15]; }
     if (ip.row < self.keywords.count) {
@@ -212,14 +229,19 @@ static UIWindow *topWindow(void) {
     return c;
 }
 
+- (void)toggleFilter:(UISwitch *)s {
+    [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kMsgFilterKey];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+}
+
 - (void)tableView:(UITableView *)tv didSelectRowAtIndexPath:(NSIndexPath *)ip {
     [tv deselectRowAtIndexPath:ip animated:YES];
-    if (ip.row != self.keywords.count) return;
+    if (ip.section == 0 || ip.row != self.keywords.count) return;
     [self addKeyword];
 }
 
 - (BOOL)tableView:(UITableView *)tv canEditRowAtIndexPath:(NSIndexPath *)ip {
-    return ip.row < self.keywords.count;
+    return ip.section == 1 && ip.row < self.keywords.count;
 }
 
 - (void)tableView:(UITableView *)tv commitEditingStyle:(UITableViewCellEditingStyle)style forRowAtIndexPath:(NSIndexPath *)ip {
@@ -287,7 +309,7 @@ static UIWindow *topWindow(void) {
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.title = @"WxCraft";
-    self.view.backgroundColor = [UIColor systemGroupedBackgroundColor];
+    self.view.backgroundColor = [UIColor whiteColor];
     self.pluginFolded = YES;
 
     self.tv = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleInsetGrouped];
@@ -393,8 +415,6 @@ static UIWindow *topWindow(void) {
         case 3: c.textLabel.text = @"自动登录电脑微信"; c.detailTextLabel.text = @"扫码后自动确认登录"; c.accessoryView = [self sw:kAutoLoginKey];
             [(UISwitch *)c.accessoryView addTarget:self action:@selector(toggleLogin:) forControlEvents:UIControlEventValueChanged]; break;
         case 4: c.textLabel.text = @"消息过滤"; c.detailTextLabel.text = [NSString stringWithFormat:@"已设 %ld 个关键词", (long)filterKeywords().count];
-            c.accessoryView = [self sw:kMsgFilterKey];
-            [(UISwitch *)c.accessoryView addTarget:self action:@selector(toggleFilter:) forControlEvents:UIControlEventValueChanged];
             c.accessoryType = UITableViewCellAccessoryDisclosureIndicator; c.selectionStyle = UITableViewCellSelectionStyleDefault; break;
         case 5: c.textLabel.text = @"圆角设置"; c.detailTextLabel.text = @"自定义 UI 圆角样式"; c.accessoryType = UITableViewCellAccessoryDisclosureIndicator; c.selectionStyle = UITableViewCellSelectionStyleDefault; break;
         }
