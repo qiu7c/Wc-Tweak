@@ -909,10 +909,15 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
 
 static BOOL isSeparatorView(UIView *v) {
     CGFloat h = v.frame.size.height;
+    CGFloat w = v.frame.size.width;
     CGFloat pw = v.superview.frame.size.width;
-    if (h > 0 && h <= 1.5 && v.frame.size.width >= pw - 10) return YES;
-    // UIVisualEffectView 型分割线
-    if ([NSStringFromClass(v.class) containsString:@"Separator"]) return YES;
+    // 薄条型：高度 ≤ 3px，宽度接近父视图
+    if (h > 0 && h <= 3 && w >= pw - 10 && w >= pw * 0.8) return YES;
+    // 类名含 Separator / Divider
+    NSString *cls = NSStringFromClass(v.class);
+    if ([cls containsString:@"Separator"] || [cls containsString:@"Divider"]) return YES;
+    // UIVisualEffectView 做的分割线（渐变模糊条）
+    if (h > 0 && h <= 3 && [v isKindOfClass:[UIVisualEffectView class]]) return YES;
     return NO;
 }
 
