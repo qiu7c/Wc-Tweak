@@ -89,7 +89,6 @@ static UIWindow *topWindow(void) {
         [btn setTitleColor:[UIColor labelColor] forState:UIControlStateNormal];
         btn.titleLabel.font = [UIFont systemFontOfSize:16];
         btn.contentHorizontalAlignment = UIControlContentHorizontalAlignmentLeft;
-        btn.contentEdgeInsets = UIEdgeInsetsMake(0, 12, 0, 0);
         btn.backgroundColor = [UIColor systemGray6Color];
         btn.layer.cornerRadius = 12;
         btn.tag = i;
