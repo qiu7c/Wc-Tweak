@@ -218,10 +218,10 @@ static BOOL pref(NSString *key) {
         UIWindow *kw = nil;
         for (UIWindowScene *scene in [UIApplication sharedApplication].connectedScenes) {
             if (scene.activationState == UISceneActivationStateForegroundActive) {
-                kw = scene.windows.firstObject; break;
+                kw = scene.windows.firstObject;
+                if (kw) break;
             }
         }
-        if (!kw) kw = [UIApplication sharedApplication].windows.firstObject;
         [kw.rootViewController presentViewController:alert animated:YES completion:nil];
         return;
     }
