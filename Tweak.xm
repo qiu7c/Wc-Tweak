@@ -791,6 +791,12 @@ static BOOL shouldFilterMsg(CMessageWrap *wrap) {
 %hook MMGrowTextView
 - (void)didMoveToSuperview {
     %orig;
+    // 圆角
+    if ([roundEnabledClasses() containsObject:NSStringFromClass(self.class)]) {
+        self.layer.cornerRadius = roundRadius(NSStringFromClass(self.class));
+        self.clipsToBounds = YES;
+    }
+    // 手势
     if (!pref(kSwipeInput)) return;
     // 避免重复添加
     for (UIGestureRecognizer *g in self.gestureRecognizers) {
@@ -849,15 +855,12 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
         return;
     }
 
-    // 自定义圆角
+        // 通用圆角逻辑 (仅 InputToolContainerView 走这里)
     NSString *cls = NSStringFromClass(self.class);
-    if ([roundEnabledClasses() containsObject:cls]) {
-        CGFloat r = roundRadius(cls);
-        self.layer.cornerRadius = r;
+    if ([cls isEqualToString:@"InputToolContainerView"] && [roundEnabledClasses() containsObject:cls]) {
+        self.layer.cornerRadius = roundRadius(cls);
         self.clipsToBounds = YES;
-        if ([cls isEqualToString:@"InputToolContainerView"]) {
-            self.layer.maskedCorners = kCALayerMinXMinYCorner | kCALayerMaxXMinYCorner;
-        }
+        self.layer.maskedCorners = kCALayerMinXMinYCorner | kCALayerMaxXMinYCorner;
     }
 }
 %end
