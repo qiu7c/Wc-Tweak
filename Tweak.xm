@@ -766,20 +766,29 @@ static BOOL shouldFilterMsg(CMessageWrap *wrap) {
 %end
 
 // ============================================================
-// 界面缩放: hook UIFont 缩小字体
-// ============================================================
-
-%hook UIFont
-+ (UIFont *)systemFontOfSize:(CGFloat)size { return %orig(size * dpiScale()); }
-+ (UIFont *)boldSystemFontOfSize:(CGFloat)size { return %orig(size * dpiScale()); }
-+ (UIFont *)systemFontOfSize:(CGFloat)size weight:(UIFontWeight)weight { return %orig(size * dpiScale(), weight); }
-%end
-
-// ============================================================
 // 注册自身
 // ============================================================
 
 %ctor {
+    // 字体 + 布局缩放
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        CGFloat s = dpiScale();
+        if (s < 1.0) {
+            for (UIWindowScene *sc in [UIApplication sharedApplication].connectedScenes) {
+                if (sc.activationState == UISceneActivationStateForegroundActive) {
+                    for (UIWindow *w in sc.windows) {
+                        if (w.rootViewController) {
+                            w.backgroundColor = [UIColor blackColor];
+                            UIView *v = w.rootViewController.view;
+                            v.layer.anchorPoint = CGPointMake(0.5, 0.5);
+                            v.transform = CGAffineTransformMakeScale(s, s);
+                        }
+                    }
+                }
+            }
+        }
+    });
+
     Class mgr = NSClassFromString(@"WCPluginsMgr");
     if (mgr) {
         id inst = ((id (*)(id, SEL))objc_msgSend)(mgr, @selector(sharedInstance));
