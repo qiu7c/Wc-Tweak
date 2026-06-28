@@ -16,6 +16,7 @@ static NSString * const kDayNightKey    = @"WcPlus_DayNight";
 static NSString * const kGameCheatKey   = @"WcPlus_GameCheat";
 static NSString * const kPluginBlockKey = @"WcPlus_PluginBlock";
 static NSString * const kPluginAllKey   = @"WcPlus_AllPlugins";
+static NSString * const kAdBlockKey    = @"WcPlus_AdBlock";
 
 static NSArray<NSString *> *blockedPlugins(void) {
     NSString *raw = [[NSUserDefaults standardUserDefaults] stringForKey:kPluginBlockKey];
@@ -158,7 +159,7 @@ static UIWindow *topWindow(void) {
 
 @interface WcPlusSettingsVC : UIViewController <UITableViewDelegate, UITableViewDataSource>
 @property (nonatomic, strong) UITableView *tableView;
-@property (nonatomic, strong) UISwitch *duangSwitch, *daynightSwitch, *gameCheatSwitch;
+@property (nonatomic, strong) UISwitch *duangSwitch, *daynightSwitch, *gameCheatSwitch, *adBlockSwitch;
 @property (nonatomic) BOOL pluginFolded;
 @end
 
@@ -183,11 +184,14 @@ static UIWindow *topWindow(void) {
     [self.daynightSwitch addTarget:self action:@selector(toggleDayNight:) forControlEvents:UIControlEventValueChanged];
     self.gameCheatSwitch = [[UISwitch alloc] init]; self.gameCheatSwitch.on = pref(kGameCheatKey);
     [self.gameCheatSwitch addTarget:self action:@selector(toggleGameCheat:) forControlEvents:UIControlEventValueChanged];
+    self.adBlockSwitch = [[UISwitch alloc] init]; self.adBlockSwitch.on = pref(kAdBlockKey);
+    [self.adBlockSwitch addTarget:self action:@selector(toggleAdBlock:) forControlEvents:UIControlEventValueChanged];
 }
 
 - (void)toggleDuang:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kDuangKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 - (void)toggleDayNight:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kDayNightKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 - (void)toggleGameCheat:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kGameCheatKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
+- (void)toggleAdBlock:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kAdBlockKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 
 - (void)togglePlugin:(UISwitch *)s {
     NSArray *all = allPlugins();
@@ -204,7 +208,7 @@ static UIWindow *topWindow(void) {
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 3; }
 
 - (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)s {
-    if (s == 0) return 3;
+    if (s == 0) return 4;
     if (s == 1) return self.pluginFolded ? 1 : (allPlugins().count ? allPlugins().count + 1 : 2);
     return 1;
 }
@@ -256,7 +260,8 @@ static UIWindow *topWindow(void) {
         }
         if (ip.row == 0) { c.textLabel.text = @"小信号弹窗 (Duang)"; c.detailTextLabel.text = @"恢复微信 8.0.31+ 召唤弹窗"; c.accessoryView = self.duangSwitch; }
         else if (ip.row == 1) { c.textLabel.text = @"日月开关"; c.detailTextLabel.text = @"UISwitch 日月动画样式"; c.accessoryView = self.daynightSwitch; }
-        else { c.textLabel.text = @"游戏作弊"; c.detailTextLabel.text = @"骰子/猜拳可选点数"; c.accessoryView = self.gameCheatSwitch; }
+        else if (ip.row == 2) { c.textLabel.text = @"游戏作弊"; c.detailTextLabel.text = @"骰子/猜拳可选点数"; c.accessoryView = self.gameCheatSwitch; }
+        else { c.textLabel.text = @"去广告"; c.detailTextLabel.text = @"公众号文章 CSS 注入屏蔽"; c.accessoryView = self.adBlockSwitch; }
         return c;
     }
     // --- 插件收纳 ---
@@ -395,6 +400,35 @@ static UIWindow *topWindow(void) {
         return;
     }
     %orig;
+}
+%end
+
+// ============================================================
+// 去广告: 公众号文章 CSS 注入
+// ============================================================
+
+static NSString * const kAdBlockCSS = @":root{--adHide:display:none!important}"
+".mpa_ad,.ad_banner,.ad_container,.ad_feedback,#js_ad_area,.rich_media_area_extra,.reward_area,"
+"[class*=ad_],[class*=banner],[id*=ad_],[id*=banner],.bottom_ad,.article_ad,.ad_wrap,.ad-box,"
+".insert_ad,.ad_iframe,.top_ad,.video_ad,.stream_ad,.ad-card,.ad_footer,.ad_header,.ad_tag,"
+".ad-label,.ad-info,.ad-link,.ad_border,.ad_unit,.ad_sponsor,.advertisement,.sponsor_area,"
+".mp-article_ad,.recommend_ad,.wx_ad,.wechat_ad,.shop_ad,.promotion_ad,.feed_ad,.adFeed"
+"{display:none!important}";
+
+@interface MMWebViewController : UIViewController
+@property (nonatomic, strong) WKWebView *m_webView;
+- (void)webViewDidFinishLoad:(id)arg1;
+@end
+
+%hook MMWebViewController
+- (void)webViewDidFinishLoad:(id)arg1 {
+    %orig;
+    if (!pref(kAdBlockKey)) return;
+    WKWebView *wv = [self valueForKey:@"m_webView"];
+    if (!wv) wv = [self valueForKey:@"webView"];
+    if (!wv) return;
+    NSString *js = [NSString stringWithFormat:@"(function(){var s=document.createElement('style');s.textContent='%@';document.head.appendChild(s)})()", kAdBlockCSS];
+    [wv evaluateJavaScript:js completionHandler:nil];
 }
 %end
 
