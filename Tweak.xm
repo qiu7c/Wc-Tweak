@@ -21,7 +21,8 @@ static NSString * const kMsgFilterKey   = @"WxCraft_MsgFilter";
 static NSString * const kMsgFilterKWKey = @"WxCraft_MsgFilterKW";
 static NSString * const kAutoLoginKey   = @"WxCraft_AutoLogin";
 static NSString * const kScreenShotHide = @"WxCraft_ScreenShotHide";
-static NSString * const kRoundInput   = @"WxCraft_RoundInput";
+static NSString * const kRoundCorners  = @"WxCraft_RoundCorners";
+static NSString * const kRoundRadius   = @"WxCraft_RoundRadius";
 
 static NSArray<NSString *> *blockedPlugins(void) {
     NSString *raw = [[NSUserDefaults standardUserDefaults] stringForKey:kPluginBlockKey];
@@ -49,6 +50,10 @@ static BOOL pref(NSString *key) {
 }
 
 static NSArray<NSString *> *filterKeywords(void);
+static NSSet<NSString *> *roundEnabledClasses(void);
+static NSSet<NSString *> *roundEnabledClasses(void);
+static NSDictionary<NSString *, NSString *> *roundElements(void);
+static CGFloat roundRadius(void);
 
 static UIWindow *topWindow(void) {
     for (UIWindowScene *sc in [UIApplication sharedApplication].connectedScenes)
@@ -268,7 +273,7 @@ static UIWindow *topWindow(void) {
 
 @interface WxCraftSettingsVC : UIViewController <UITableViewDelegate, UITableViewDataSource>
 @property (nonatomic, strong) UITableView *tableView;
-@property (nonatomic, strong) UISwitch *duangSwitch, *daynightSwitch, *gameCheatSwitch, *adBlockSwitch, *msgFilterSwitch, *autoLoginSwitch, *screenshotSwitch, *roundInputSwitch;
+@property (nonatomic, strong) UISwitch *duangSwitch, *daynightSwitch, *gameCheatSwitch, *adBlockSwitch, *msgFilterSwitch, *autoLoginSwitch, *screenshotSwitch;
 @property (nonatomic) BOOL pluginFolded;
 @property (nonatomic) NSInteger versionTapCount;
 @end
@@ -302,8 +307,6 @@ static UIWindow *topWindow(void) {
     [self.autoLoginSwitch addTarget:self action:@selector(toggleAutoLogin:) forControlEvents:UIControlEventValueChanged];
     self.screenshotSwitch = [[UISwitch alloc] init]; self.screenshotSwitch.on = pref(kScreenShotHide);
     [self.screenshotSwitch addTarget:self action:@selector(toggleScreenShot:) forControlEvents:UIControlEventValueChanged];
-    self.roundInputSwitch = [[UISwitch alloc] init]; self.roundInputSwitch.on = pref(kRoundInput);
-    [self.roundInputSwitch addTarget:self action:@selector(toggleRoundInput:) forControlEvents:UIControlEventValueChanged];
 }
 
 - (void)toggleDuang:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kDuangKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
@@ -313,7 +316,6 @@ static UIWindow *topWindow(void) {
 - (void)toggleMsgFilter:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kMsgFilterKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 - (void)toggleAutoLogin:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kAutoLoginKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 - (void)toggleScreenShot:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kScreenShotHide]; [[NSUserDefaults standardUserDefaults] synchronize]; }
-- (void)toggleRoundInput:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kRoundInput]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 
 - (void)togglePlugin:(UISwitch *)s {
     NSArray *all = allPlugins();
@@ -363,6 +365,9 @@ static UIWindow *topWindow(void) {
 
 - (void)tableView:(UITableView *)tv didSelectRowAtIndexPath:(NSIndexPath *)ip {
     [tv deselectRowAtIndexPath:ip animated:YES];
+    if (ip.section == 0 && ip.row == 7) {
+        [self.navigationController pushViewController:[[WxCraftRoundVC alloc] init] animated:YES];
+    }
     if (ip.section == 0 && ip.row == 4) {
         [self.navigationController pushViewController:[[WxCraftKeywordVC alloc] init] animated:YES];
     }
@@ -443,7 +448,13 @@ static UIWindow *topWindow(void) {
         else if (ip.row == 3) { c.textLabel.text = @"去广告"; c.detailTextLabel.text = @"朋友圈 / 文章 / 小程序"; c.accessoryView = self.adBlockSwitch; }
         else if (ip.row == 5) { c.textLabel.text = @"自动登录"; c.detailTextLabel.text = @"电脑登录自动确认"; c.accessoryView = self.autoLoginSwitch; }
         else if (ip.row == 6) { c.textLabel.text = @"截图转发按钮"; c.detailTextLabel.text = @"去除截图后的小按钮"; c.accessoryView = self.screenshotSwitch; }
-        else { c.textLabel.text = @"输入框圆角"; c.detailTextLabel.text = @"聊天输入框圆润样式"; c.accessoryView = self.roundInputSwitch; }
+        else {
+            NSInteger cnt = roundEnabledClasses().count;
+            c.textLabel.text = @"圆角设置";
+            c.detailTextLabel.text = cnt ? [NSString stringWithFormat:@"已启用 %ld 项 >", (long)cnt] : @"选择元素 >";
+            c.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+            c.selectionStyle = UITableViewCellSelectionStyleDefault;
+        }
         return c;
     }
     // --- 插件收纳 ---
@@ -752,21 +763,124 @@ static BOOL shouldFilterMsg(CMessageWrap *wrap) {
 
 // ============================================================
 // ============================================================
-// 聊天输入框圆角
+// 万能圆角
 // ============================================================
 
-@interface MMGrowTextView : UITextView
-@end
+// 已启用的圆角类名集合
+static NSSet<NSString *> *roundEnabledClasses(void) {
+    NSString *raw = [[NSUserDefaults standardUserDefaults] stringForKey:kRoundCorners];
+    if (!raw.length) return [NSSet set];
+    return [NSSet setWithArray:[raw componentsSeparatedByString:@","]];
+}
 
-%hook MMGrowTextView
+static CGFloat roundRadius(void) {
+    CGFloat v = [[NSUserDefaults standardUserDefaults] floatForKey:kRoundRadius];
+    return v > 0 ? v : 20;
+}
+
+// 支持的元素（类名 → 中文名）
+static NSDictionary<NSString *, NSString *> *roundElements(void) {
+    return @{
+        @"MMGrowTextView": @"聊天输入框",
+    };
+}
+
+%hook UIView
 - (void)didMoveToSuperview {
     %orig;
-    if (pref(kRoundInput)) {
-        self.layer.cornerRadius = self.frame.size.height / 2;
+    if (!self.superview) return;
+    NSString *cls = NSStringFromClass(self.class);
+    if ([roundEnabledClasses() containsObject:cls]) {
+        self.layer.cornerRadius = roundRadius();
         self.clipsToBounds = YES;
     }
 }
 %end
+
+// 圆角管理页
+@interface WxCraftRoundVC : UIViewController <UITableViewDelegate, UITableViewDataSource>
+@property (nonatomic, strong) UITableView *tv;
+@property (nonatomic, strong) NSMutableSet<NSString *> *enabled;
+@end
+
+@implementation WxCraftRoundVC
+
+- (void)viewDidLoad {
+    [super viewDidLoad];
+    self.title = @"圆角设置";
+    self.view.backgroundColor = [UIColor whiteColor];
+    self.enabled = [roundEnabledClasses() mutableCopy];
+
+    self.tv = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleGrouped];
+    self.tv.delegate = self; self.tv.dataSource = self;
+    self.tv.backgroundColor = [UIColor colorWithWhite:0.95 alpha:1];
+    self.tv.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [self.view addSubview:self.tv];
+}
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 2; }
+
+- (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)s {
+    return s == 0 ? roundElements().count : 1;
+}
+
+- (CGFloat)tableView:(UITableView *)tv heightForHeaderInSection:(NSInteger)s { return 36; }
+
+- (UIView *)tableView:(UITableView *)tv viewForHeaderInSection:(NSInteger)s {
+    UILabel *l = [[UILabel alloc] initWithFrame:CGRectMake(16, 8, tv.frame.size.width-32, 20)];
+    l.font = [UIFont systemFontOfSize:13 weight:UIFontWeightSemibold]; l.textColor = [UIColor grayColor];
+    l.text = s == 0 ? @"圆角元素" : @"圆角大小";
+    UIView *h = [[UIView alloc] init]; [h addSubview:l];
+    return h;
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tv cellForRowAtIndexPath:(NSIndexPath *)ip {
+    if (ip.section == 0) {
+        NSArray *keys = roundElements().allKeys;
+        NSString *cls = keys[ip.row];
+        NSString *name = roundElements()[cls];
+        UITableViewCell *c = [tv dequeueReusableCellWithIdentifier:@"re"];
+        if (!c) { c = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"re"]; c.selectionStyle = UITableViewCellSelectionStyleNone; }
+        c.textLabel.text = name; c.textLabel.font = [UIFont systemFontOfSize:15];
+        UISwitch *sw = [[UISwitch alloc] init];
+        sw.on = [self.enabled containsObject:cls];
+        sw.tag = ip.row;
+        [sw addTarget:self action:@selector(toggle:) forControlEvents:UIControlEventValueChanged];
+        c.accessoryView = sw;
+        return c;
+    }
+    UITableViewCell *c = [tv dequeueReusableCellWithIdentifier:@"sl"];
+    if (!c) { c = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:@"sl"]; c.selectionStyle = UITableViewCellSelectionStyleDefault; }
+    c.textLabel.text = @"圆角大小";
+    c.detailTextLabel.text = [NSString stringWithFormat:@"%.0fpt >", roundRadius()];
+    c.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+    return c;
+}
+
+- (void)toggle:(UISwitch *)sw {
+    NSArray *keys = roundElements().allKeys;
+    NSString *cls = keys[sw.tag];
+    if (sw.on) [self.enabled addObject:cls]; else [self.enabled removeObject:cls];
+    [self save];
+}
+
+- (void)tableView:(UITableView *)tv didSelectRowAtIndexPath:(NSIndexPath *)ip {
+    [tv deselectRowAtIndexPath:ip animated:YES];
+    if (ip.section != 1) return;
+    NSArray *opts = @[@"8pt", @"12pt", @"16pt", @"20pt", @"24pt", @"28pt", @"32pt"];
+    [WxCraftPicker showWithTitle:@"圆角大小" items:opts handler:^(NSInteger idx) {
+        CGFloat vals[] = {8, 12, 16, 20, 24, 28, 32};
+        [[NSUserDefaults standardUserDefaults] setFloat:vals[idx] forKey:kRoundRadius];
+        [[NSUserDefaults standardUserDefaults] synchronize];
+        [tv reloadData];
+    }];
+}
+
+- (void)save {
+    [[NSUserDefaults standardUserDefaults] setObject:[self.enabled.allObjects componentsJoinedByString:@","] forKey:kRoundCorners];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+}
+@end
 
 // ============================================================
 // 插件收纳隐藏
