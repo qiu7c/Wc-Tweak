@@ -379,6 +379,7 @@ static UIWindow *topWindow(void) {
         c.detailTextLabel.textColor = [UIColor secondaryLabelColor];
     }
     c.textLabel.text = @""; c.detailTextLabel.text = @"";
+    c.textLabel.textColor = [UIColor labelColor];
     c.accessoryView = nil; c.accessoryType = UITableViewCellAccessoryNone; c.selectionStyle = UITableViewCellSelectionStyleNone;
 
     if (ip.section == 0) { // 聊天增强
@@ -441,7 +442,7 @@ static UIWindow *topWindow(void) {
         return c;
     }
     // S3: 关于
-    if (ip.row == 0) { c.textLabel.text = @"作者"; c.detailTextLabel.text = @"Cc  wxid_ntutupipyxtq22"; c.accessoryType = UITableViewCellAccessoryDisclosureIndicator; c.selectionStyle = UITableViewCellSelectionStyleDefault; }
+    if (ip.row == 0) { c.textLabel.text = @"作者"; c.detailTextLabel.text = @"Cc"; c.accessoryType = UITableViewCellAccessoryDisclosureIndicator; c.selectionStyle = UITableViewCellSelectionStyleDefault; }
     else if (ip.row == 1) { c.textLabel.text = @"声明"; c.detailTextLabel.text = @"仅供自己使用学习交流，请勿传播"; }
     else { c.textLabel.text = @"版本 1.0.0"; c.detailTextLabel.text = @"连点 5 次复制 wxid 到剪贴板"; }
     return c;
