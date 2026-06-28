@@ -806,10 +806,17 @@ static BOOL findAndHideLabel(UIView *root, NSArray<NSString *> *names) {
     if (names.count && findAndHideLabel(self, names)) {
         self.hidden = YES;
         self.alpha = 0;
-        self.frame = CGRectZero;
         return;
     }
     %orig;
+}
+
+- (CGSize)sizeThatFits:(CGSize)size {
+    NSArray *names = hiddenCards();
+    if (names.count && findAndHideLabel(self, names)) {
+        return CGSizeZero;
+    }
+    return %orig;
 }
 %end
 
