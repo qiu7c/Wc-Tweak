@@ -780,16 +780,12 @@ static NSArray<NSString *> *hiddenCards(void) {
     return raw.length ? [raw componentsSeparatedByString:@","] : @[];
 }
 
-@interface WCTableViewNormalCellManager : NSObject
-@property (nonatomic, copy) NSString *title;
-@end
-
 @interface WCTableViewSectionManager : NSObject
-- (void)addCell:(WCTableViewNormalCellManager *)cell;
+- (void)addCell:(id)cell;
 @end
 
 %hook WCTableViewSectionManager
-- (void)addCell:(WCTableViewNormalCellManager *)cell {
+- (void)addCell:(id)cell {
     NSArray *n = hiddenCards();
     if (n.count) {
         NSString *t = [cell valueForKey:@"title"] ?: @"";
