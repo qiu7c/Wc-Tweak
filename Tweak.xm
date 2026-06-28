@@ -801,34 +801,27 @@ static NSArray<NSString *> *hiddenCards(void) {
 
 // 隐藏底部卡片
 %hook MMTableViewCell
-- (void)layoutSubviews {
-    %orig;
+- (void)setFrame:(CGRect)frame {
     NSArray *names = hiddenCards();
-    if (!names.count) return;
-    // 用 accessibilityLabel（用户确认过有效）
-    NSString *al = self.accessibilityLabel;
-    if (!al.length) {
-        // fallback: 递归找 UILabel
+    if (names.count) {
+        NSString *match = nil;
         for (UIView *sub in self.contentView.subviews) {
             if ([sub isKindOfClass:[UILabel class]]) {
                 NSString *t = [(UILabel *)sub text];
-                if (t.length) { al = t; break; }
+                for (NSString *name in names) {
+                    if ([t isEqualToString:name]) { match = name; break; }
+                }
+                if (match) break;
             }
         }
-    }
-    if (!al.length) return;
-    for (NSString *name in names) {
-        if ([al containsString:name]) {
+        if (match) {
+            %orig(CGRectMake(frame.origin.x, frame.origin.y, frame.size.width, 0));
             self.hidden = YES;
             self.alpha = 0;
-            self.frame = CGRectMake(0, 0, 0, 0);
-            UIView *tv = self.superview;
-            while (tv && ![tv isKindOfClass:[UITableView class]]) tv = tv.superview;
-            [(UITableView *)tv beginUpdates];
-            [(UITableView *)tv endUpdates];
             return;
         }
     }
+    %orig;
 }
 %end
 
