@@ -349,7 +349,9 @@ static UIWindow *topWindow(void) {
         }
     });
 
-    self.tv = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleInsetGrouped];
+    self.tv = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStylePlain];
+    self.tv.separatorStyle = UITableViewCellSeparatorStyleNone;
+    self.tv.backgroundColor = [UIColor systemGroupedBackgroundColor];
     self.tv.delegate = self; self.tv.dataSource = self;
     self.tv.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     self.tv.tableHeaderView = header;
@@ -382,11 +384,39 @@ static UIWindow *topWindow(void) {
     return 3;              // 关于
 }
 
-- (NSString *)tableView:(UITableView *)tv titleForHeaderInSection:(NSInteger)s {
-    if (s == 0) return @"聊天增强";
-    if (s == 1) return @"界面";
-    if (s == 2) return @"插件收纳";
-    return @"关于";
+- (CGFloat)tableView:(UITableView *)tv heightForHeaderInSection:(NSInteger)s { return 44; }
+- (CGFloat)tableView:(UITableView *)tv heightForFooterInSection:(NSInteger)s { return 4; }
+
+- (UIView *)tableView:(UITableView *)tv viewForHeaderInSection:(NSInteger)s {
+    UIView *v = [[UIView alloc] initWithFrame:CGRectMake(0, 0, tv.frame.size.width, 44)];
+    UILabel *l = [[UILabel alloc] initWithFrame:CGRectMake(16, 20, tv.frame.size.width - 32, 20)];
+    l.font = [UIFont systemFontOfSize:13 weight:UIFontWeightSemibold];
+    l.textColor = [UIColor secondaryLabelColor];
+    if (s == 0) l.text = @"聊天增强";
+    else if (s == 1) l.text = @"界面";
+    else if (s == 2) l.text = @"插件收纳";
+    else l.text = @"关于";
+    [v addSubview:l];
+    return v;
+}
+
+- (void)tableView:(UITableView *)tv willDisplayCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)ip {
+    cell.backgroundColor = [UIColor whiteColor];
+    // 给每个 section 的第一个和最后一个 cell 加圆角
+    NSInteger rows = [self tableView:tv numberOfRowsInSection:ip.section];
+    if (rows == 1) {
+        cell.layer.cornerRadius = 14; cell.layer.maskedCorners = kCALayerMinXMinYCorner | kCALayerMaxXMinYCorner | kCALayerMinXMaxYCorner | kCALayerMaxXMaxYCorner;
+        cell.clipsToBounds = YES;
+    } else if (ip.row == 0) {
+        cell.layer.cornerRadius = 14; cell.layer.maskedCorners = kCALayerMinXMinYCorner | kCALayerMaxXMinYCorner;
+        cell.clipsToBounds = YES;
+    } else if (ip.row == rows - 1) {
+        cell.layer.cornerRadius = 14; cell.layer.maskedCorners = kCALayerMinXMaxYCorner | kCALayerMaxXMaxYCorner;
+        cell.clipsToBounds = YES;
+    } else {
+        cell.layer.cornerRadius = 0; cell.clipsToBounds = NO;
+    }
+    cell.separatorInset = (ip.row < rows - 1) ? UIEdgeInsetsMake(0, 16, 0, 16) : UIEdgeInsetsMake(0, 0, 0, tv.bounds.size.width);
 }
 
 - (void)tableView:(UITableView *)tv didSelectRowAtIndexPath:(NSIndexPath *)ip {
