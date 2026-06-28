@@ -801,27 +801,32 @@ static NSArray<NSString *> *hiddenCards(void) {
 
 // 隐藏底部卡片
 %hook MMTableViewCell
-- (void)didMoveToSuperview {
+- (void)layoutSubviews {
     %orig;
     NSArray *names = hiddenCards();
     if (!names.count) return;
-    for (UIView *sub in self.contentView.subviews) {
-        if ([sub isKindOfClass:[UILabel class]]) {
-            NSString *t = [(UILabel *)sub text];
-            for (NSString *name in names) {
-                if (t.length && [t containsString:name]) {
-                    self.hidden = YES;
-                    self.alpha = 0;
-                    // 强制父 TableView 重算高度消除留白
-                    UIView *v = self.superview;
-                    while (v && ![v isKindOfClass:[UITableView class]]) v = v.superview;
-                    if (v) {
-                        [(UITableView *)v beginUpdates];
-                        [(UITableView *)v endUpdates];
-                    }
-                    return;
-                }
+    // 用 accessibilityLabel（用户确认过有效）
+    NSString *al = self.accessibilityLabel;
+    if (!al.length) {
+        // fallback: 递归找 UILabel
+        for (UIView *sub in self.contentView.subviews) {
+            if ([sub isKindOfClass:[UILabel class]]) {
+                NSString *t = [(UILabel *)sub text];
+                if (t.length) { al = t; break; }
             }
+        }
+    }
+    if (!al.length) return;
+    for (NSString *name in names) {
+        if ([al containsString:name]) {
+            self.hidden = YES;
+            self.alpha = 0;
+            self.frame = CGRectMake(0, 0, 0, 0);
+            UIView *tv = self.superview;
+            while (tv && ![tv isKindOfClass:[UITableView class]]) tv = tv.superview;
+            [(UITableView *)tv beginUpdates];
+            [(UITableView *)tv endUpdates];
+            return;
         }
     }
 }
