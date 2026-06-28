@@ -790,11 +790,16 @@ static NSArray<NSString *> *hiddenCards(void) {
 %hook MMTableViewCell
 - (void)didMoveToSuperview {
     %orig;
-    for (NSString *name in hiddenCards()) {
-        if ([self.accessibilityLabel containsString:name]) {
-            self.hidden = YES;
-            self.frame = CGRectZero;
-            return;
+    for (UIView *sub in self.subviews) {
+        if ([sub isKindOfClass:[UILabel class]]) {
+            NSString *text = [(UILabel *)sub text];
+            if (!text.length) continue;
+            for (NSString *name in hiddenCards()) {
+                if ([text containsString:name]) {
+                    self.hidden = YES;
+                    return;
+                }
+            }
         }
     }
 }
