@@ -22,7 +22,7 @@ static NSString * const kMsgFilterKWKey = @"WxCraft_MsgFilterKW";
 static NSString * const kAutoLoginKey   = @"WxCraft_AutoLogin";
 static NSString * const kScreenShotHide = @"WxCraft_ScreenShotHide";
 static NSString * const kRoundCorners  = @"WxCraft_RoundCorners";
-static NSString * const kRoundRadius   = @"WxCraft_RoundRadius";
+static NSString * const kRoundRadiusPrefix = @"WxCraft_Round_";
 
 static NSArray<NSString *> *blockedPlugins(void) {
     NSString *raw = [[NSUserDefaults standardUserDefaults] stringForKey:kPluginBlockKey];
@@ -454,9 +454,8 @@ static UIWindow *topWindow(void) {
         else if (ip.row == 5) { c.textLabel.text = @"自动登录"; c.detailTextLabel.text = @"电脑登录自动确认"; c.accessoryView = self.autoLoginSwitch; }
         else if (ip.row == 6) { c.textLabel.text = @"截图转发按钮"; c.detailTextLabel.text = @"去除截图后的小按钮"; c.accessoryView = self.screenshotSwitch; }
         else {
-            NSInteger cnt = roundEnabledClasses().count;
             c.textLabel.text = @"圆角设置";
-            c.detailTextLabel.text = cnt ? [NSString stringWithFormat:@"已启用 %ld 项 >", (long)cnt] : @"选择元素 >";
+            c.detailTextLabel.text = @"自定义 UI 圆角 >";
             c.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
             c.selectionStyle = UITableViewCellSelectionStyleDefault;
         }
@@ -778,16 +777,16 @@ static NSSet<NSString *> *roundEnabledClasses(void) {
     return [NSSet setWithArray:[raw componentsSeparatedByString:@","]];
 }
 
-static CGFloat roundRadius(void) {
-    CGFloat v = [[NSUserDefaults standardUserDefaults] floatForKey:kRoundRadius];
+static CGFloat roundRadius(NSString *cls) {
+    CGFloat v = [[NSUserDefaults standardUserDefaults] floatForKey:[kRoundRadiusPrefix stringByAppendingString:cls]];
     return v > 0 ? v : 20;
 }
 
 // 支持的元素（类名 → 中文名）
 static NSDictionary<NSString *, NSString *> *roundElements(void) {
     return @{
-        @"MMGrowTextView":     @"聊天输入框",
-        @"InputToolViewBar":   @"输入工具栏（上圆角）",
+        @"MMGrowTextView":   @"聊天输入框",
+        @"InputToolViewBar": @"输入工具栏",
     };
 }
 
@@ -797,7 +796,7 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
     if (!self.superview) return;
     NSString *cls = NSStringFromClass(self.class);
     if ([roundEnabledClasses() containsObject:cls]) {
-        CGFloat r = roundRadius();
+        CGFloat r = roundRadius(cls);
         self.layer.cornerRadius = r;
         self.clipsToBounds = YES;
         if ([cls isEqualToString:@"InputToolViewBar"]) {
@@ -823,42 +822,39 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
     [self.view addSubview:self.tv];
 }
 
-- (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 2; }
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 1; }
 
 - (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)s {
-    return s == 0 ? roundElements().count : 1;
+    return roundElements().count;
 }
 
-- (CGFloat)tableView:(UITableView *)tv heightForHeaderInSection:(NSInteger)s { return 36; }
-
-- (UIView *)tableView:(UITableView *)tv viewForHeaderInSection:(NSInteger)s {
-    UILabel *l = [[UILabel alloc] initWithFrame:CGRectMake(16, 8, tv.frame.size.width-32, 20)];
-    l.font = [UIFont systemFontOfSize:13 weight:UIFontWeightSemibold]; l.textColor = [UIColor grayColor];
-    l.text = s == 0 ? @"圆角元素" : @"圆角大小";
-    UIView *h = [[UIView alloc] init]; [h addSubview:l];
-    return h;
-}
+- (CGFloat)tableView:(UITableView *)tv heightForHeaderInSection:(NSInteger)s { return 8; }
 
 - (UITableViewCell *)tableView:(UITableView *)tv cellForRowAtIndexPath:(NSIndexPath *)ip {
-    if (ip.section == 0) {
-        NSArray *keys = roundElements().allKeys;
-        NSString *cls = keys[ip.row];
-        NSString *name = roundElements()[cls];
-        UITableViewCell *c = [tv dequeueReusableCellWithIdentifier:@"re"];
-        if (!c) { c = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"re"]; c.selectionStyle = UITableViewCellSelectionStyleNone; }
-        c.textLabel.text = name; c.textLabel.font = [UIFont systemFontOfSize:15];
-        UISwitch *sw = [[UISwitch alloc] init];
-        sw.on = [self.enabled containsObject:cls];
-        sw.tag = ip.row;
-        [sw addTarget:self action:@selector(toggle:) forControlEvents:UIControlEventValueChanged];
-        c.accessoryView = sw;
-        return c;
+    NSArray *keys = roundElements().allKeys;
+    NSString *cls = keys[ip.row];
+    NSString *name = roundElements()[cls];
+    BOOL on = [self.enabled containsObject:cls];
+    CGFloat r = roundRadius(cls);
+
+    UITableViewCell *c = [tv dequeueReusableCellWithIdentifier:@"rr"];
+    if (!c) {
+        c = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:@"rr"];
     }
-    UITableViewCell *c = [tv dequeueReusableCellWithIdentifier:@"sl"];
-    if (!c) { c = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:@"sl"]; c.selectionStyle = UITableViewCellSelectionStyleDefault; }
-    c.textLabel.text = @"圆角大小";
-    c.detailTextLabel.text = [NSString stringWithFormat:@"%.0fpt >", roundRadius()];
-    c.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+    c.textLabel.text = name;
+    c.textLabel.font = [UIFont systemFontOfSize:15];
+    c.detailTextLabel.text = on ? [NSString stringWithFormat:@"%.0fpt · 已启用", r] : @"已关闭";
+    c.detailTextLabel.font = [UIFont systemFontOfSize:12];
+    c.selectionStyle = on ? UITableViewCellSelectionStyleDefault : UITableViewCellSelectionStyleNone;
+    c.accessoryType = on ? UITableViewCellAccessoryDisclosureIndicator : UITableViewCellAccessoryNone;
+    c.accessoryView = nil;
+
+    UISwitch *sw = [[UISwitch alloc] init];
+    sw.on = on;
+    sw.tag = ip.row;
+    [sw addTarget:self action:@selector(toggle:) forControlEvents:UIControlEventValueChanged];
+    c.accessoryView = sw;
+
     return c;
 }
 
@@ -867,15 +863,20 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
     NSString *cls = keys[sw.tag];
     if (sw.on) [self.enabled addObject:cls]; else [self.enabled removeObject:cls];
     [self save];
+    [self.tv reloadData];
 }
 
 - (void)tableView:(UITableView *)tv didSelectRowAtIndexPath:(NSIndexPath *)ip {
     [tv deselectRowAtIndexPath:ip animated:YES];
-    if (ip.section != 1) return;
-    NSArray *opts = @[@"8pt", @"12pt", @"16pt", @"20pt", @"24pt", @"28pt", @"32pt"];
-    [WxCraftPicker showWithTitle:@"圆角大小" items:opts handler:^(NSInteger idx) {
-        CGFloat vals[] = {8, 12, 16, 20, 24, 28, 32};
-        [[NSUserDefaults standardUserDefaults] setFloat:vals[idx] forKey:kRoundRadius];
+    NSArray *keys = roundElements().allKeys;
+    NSString *cls = keys[ip.row];
+    if (![self.enabled containsObject:cls]) return;
+
+    NSArray *opts = @[@"4pt", @"6pt", @"8pt", @"10pt", @"12pt", @"14pt", @"16pt", @"18pt", @"20pt", @"24pt", @"28pt", @"32pt"];
+    [WxCraftPicker showWithTitle:roundElements()[cls] items:opts handler:^(NSInteger idx) {
+        CGFloat vals[] = {4,6,8,10,12,14,16,18,20,24,28,32};
+        NSString *key = [kRoundRadiusPrefix stringByAppendingString:cls];
+        [[NSUserDefaults standardUserDefaults] setFloat:vals[idx] forKey:key];
         [[NSUserDefaults standardUserDefaults] synchronize];
         [tv reloadData];
     }];
