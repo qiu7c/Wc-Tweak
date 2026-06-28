@@ -801,18 +801,17 @@ static BOOL shouldFilterMsg(CMessageWrap *wrap) {
 %end
 
 // ============================================================
-// ============================================================
-// 输入框左滑清除 / 右滑粘贴
+// 输入框增强 (MMTextView = 真正的输入框)
 // ============================================================
 
-@interface MMGrowTextView : UITextView
+@interface MMTextView : UITextView
 @property (nonatomic, copy) NSString *text;
 - (void)wxc_updatePlaceholder;
 - (void)wxc_clearText;
 - (void)wxc_pasteText;
 @end
 
-%hook MMGrowTextView
+%hook MMTextView
 - (void)didMoveToSuperview {
     %orig;
     // 圆角
@@ -825,7 +824,6 @@ static BOOL shouldFilterMsg(CMessageWrap *wrap) {
 
     // 手势
     if (!pref(kSwipeInput)) return;
-    // 避免重复添加
     for (UIGestureRecognizer *g in self.gestureRecognizers) {
         if ([g isKindOfClass:[UISwipeGestureRecognizer class]]) return;
     }
@@ -897,7 +895,7 @@ static CGFloat roundRadius(NSString *cls) {
 // 支持的元素（类名 → 中文名）
 static NSDictionary<NSString *, NSString *> *roundElements(void) {
     return @{
-        @"MMGrowTextView":          @"聊天输入框",
+        @"MMTextView":              @"聊天输入框",
         @"InputToolContainerView":  @"输入工具容器",
     };
 }
