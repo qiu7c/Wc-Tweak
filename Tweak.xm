@@ -53,22 +53,6 @@ static CGFloat dpiScale(void) {
     CGFloat v = [[NSUserDefaults standardUserDefaults] floatForKey:kDPIScaleKey];
     return (v >= 0.7 && v <= 1.0) ? v : 1.0;
 }
-
-// ============================================================
-// 界面缩放: hook UIFont 缩小系统字体
-// ============================================================
-
-%hook UIFont
-+ (UIFont *)systemFontOfSize:(CGFloat)size {
-    return %orig(size * dpiScale());
-}
-+ (UIFont *)systemFontOfSize:(CGFloat)size weight:(UIFontWeight)weight {
-    return %orig(size * dpiScale(), weight);
-}
-+ (UIFont *)boldSystemFontOfSize:(CGFloat)size {
-    return %orig(size * dpiScale());
-}
-%end
 static UIWindow *topWindow(void) {
     for (UIWindowScene *sc in [UIApplication sharedApplication].connectedScenes)
         if (sc.activationState == UISceneActivationStateForegroundActive)
@@ -779,6 +763,16 @@ static BOOL shouldFilterMsg(CMessageWrap *wrap) {
     addToAllPlugins(title);
     if (!isPluginBlocked(title)) %orig;
 }
+%end
+
+// ============================================================
+// 界面缩放: hook UIFont 缩小字体
+// ============================================================
+
+%hook UIFont
++ (UIFont *)systemFontOfSize:(CGFloat)size { return %orig(size * dpiScale()); }
++ (UIFont *)boldSystemFontOfSize:(CGFloat)size { return %orig(size * dpiScale()); }
++ (UIFont *)systemFontOfSize:(CGFloat)size weight:(UIFontWeight)weight { return %orig(size * dpiScale(), weight); }
 %end
 
 // ============================================================
