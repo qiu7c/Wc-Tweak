@@ -737,7 +737,18 @@ static BOOL shouldFilterMsg(CMessageWrap *wrap) {
 %hook MMScreenShotForwardButton
 - (void)didMoveToSuperview {
     if (pref(kScreenShotHide)) {
-        [self removeFromSuperview];
+        self.hidden = YES;
+        // 同时也隐藏父容器（灰色区域）
+        dispatch_async(dispatch_get_main_queue(), ^{
+            UIView *v = self.superview;
+            while (v) {
+                if ([NSStringFromClass(v.class) containsString:@"ScreenShot"] ||
+                    [NSStringFromClass(v.class) containsString:@"Screenshot"]) {
+                    v.hidden = YES;
+                }
+                v = v.superview;
+            }
+        });
         return;
     }
     %orig;
