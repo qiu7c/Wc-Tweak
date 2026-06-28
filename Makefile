@@ -16,6 +16,6 @@ TWEAK_NAME = WcPlus
 # 源文件
 WcPlus_FILES = Tweak.xm DayNightSwitch.m
 WcPlus_CFLAGS = -fobjc-arc
-WcPlus_FRAMEWORKS = UIKit Foundation QuartzCore
+WcPlus_FRAMEWORKS = UIKit Foundation QuartzCore WebKit
 
 include $(THEOS_MAKE_PATH)/tweak.mk
