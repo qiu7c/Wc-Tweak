@@ -68,36 +68,34 @@ static UIWindow *topWindow(void) {
     overlay.alpha = 0;
     overlay.tag = 9999;
 
-    // 紧凑布局：每行3个，行高40
+    // 撑满宽度
+    CGFloat pad = 20, gap = 12, margin = 16;
+    CGFloat cardW = kw.bounds.size.width - margin * 2;
+    CGFloat btnW = (cardW - pad * 2 - gap * 2) / 3;
+    CGFloat btnH = 48;
     NSInteger cols = 3;
-    CGFloat btnW = 68, btnH = 42, gap = 10, pad = 16;
     NSInteger rows = (items.count + cols - 1) / cols;
-    CGFloat cardW = pad * 2 + cols * btnW + (cols - 1) * gap;
 
-    UIView *card = [[UIView alloc] initWithFrame:CGRectMake(0, kw.bounds.size.height, cardW, 0)];
+    UIView *card = [[UIView alloc] initWithFrame:CGRectMake(margin, kw.bounds.size.height, cardW, 0)];
     card.backgroundColor = [UIColor systemBackgroundColor];
-    card.layer.cornerRadius = 18;
+    card.layer.cornerRadius = 20;
     card.layer.masksToBounds = YES;
     card.tag = 8888;
-    card.center = CGPointMake(kw.bounds.size.width / 2, card.center.y);
 
     // 标题
-    UILabel *tl = [[UILabel alloc] initWithFrame:CGRectMake(pad, 14, cardW - pad * 2, 18)];
-    tl.text = title; tl.font = [UIFont systemFontOfSize:15 weight:UIFontWeightSemibold];
+    UILabel *tl = [[UILabel alloc] initWithFrame:CGRectMake(pad, 18, cardW - pad * 2, 20)];
+    tl.text = title; tl.font = [UIFont systemFontOfSize:16 weight:UIFontWeightSemibold];
     tl.textAlignment = NSTextAlignmentCenter;
     [card addSubview:tl];
 
-    CGFloat y = 40;
+    CGFloat y = 48;
     for (NSInteger r = 0; r < rows; r++) {
-        NSInteger colsInRow = (r == rows - 1 && items.count % cols != 0) ? items.count % cols : cols;
-        CGFloat rowW = colsInRow * btnW + (colsInRow - 1) * gap;
-        CGFloat startX = (cardW - rowW) / 2;
-        for (NSInteger c = 0; c < colsInRow; c++) {
+        for (NSInteger c = 0; c < cols && (r * cols + c) < items.count; c++) {
             NSInteger idx = r * cols + c;
-            UIButton *btn = [[UIButton alloc] initWithFrame:CGRectMake(startX + c * (btnW + gap), y, btnW, btnH)];
+            UIButton *btn = [[UIButton alloc] initWithFrame:CGRectMake(pad + c * (btnW + gap), y, btnW, btnH)];
             [btn setTitle:items[idx] forState:UIControlStateNormal];
             [btn setTitleColor:[UIColor labelColor] forState:UIControlStateNormal];
-            btn.titleLabel.font = [UIFont systemFontOfSize:18];
+            btn.titleLabel.font = [UIFont systemFontOfSize:17 weight:UIFontWeightMedium];
             btn.backgroundColor = [UIColor systemGray6Color];
             btn.layer.cornerRadius = 14;
             btn.tag = idx;
@@ -109,24 +107,24 @@ static UIWindow *topWindow(void) {
         y += btnH + gap;
     }
 
-    // 小取消文字
-    UIButton *cancel = [[UIButton alloc] initWithFrame:CGRectMake(0, y + 6, cardW, 32)];
+    // 取消
+    UIButton *cancel = [[UIButton alloc] initWithFrame:CGRectMake(0, y + 8, cardW, 36)];
     [cancel setTitle:@"取消" forState:UIControlStateNormal];
     [cancel setTitleColor:[UIColor secondaryLabelColor] forState:UIControlStateNormal];
-    cancel.titleLabel.font = [UIFont systemFontOfSize:13];
+    cancel.titleLabel.font = [UIFont systemFontOfSize:14];
     [cancel addTarget:[WcPlusPicker class] action:@selector(handleCancel:) forControlEvents:UIControlEventTouchUpInside];
     objc_setAssociatedObject(cancel, "overlay", overlay, OBJC_ASSOCIATION_ASSIGN);
     [card addSubview:cancel];
 
-    CGFloat totalH = y + 44;
-    card.frame = CGRectMake(card.frame.origin.x, kw.bounds.size.height, cardW, totalH);
+    CGFloat totalH = y + 50;
+    card.frame = CGRectMake(margin, kw.bounds.size.height, cardW, totalH);
 
     [overlay addSubview:card];
     [kw addSubview:overlay];
 
     [UIView animateWithDuration:0.3 delay:0 usingSpringWithDamping:0.85 initialSpringVelocity:0 options:0 animations:^{
         overlay.alpha = 1;
-        card.frame = CGRectMake(card.frame.origin.x, kw.bounds.size.height - totalH - 40, cardW, totalH);
+        card.frame = CGRectMake(margin, kw.bounds.size.height - totalH - 34, cardW, totalH);
     } completion:nil];
 }
 
@@ -383,9 +381,9 @@ static UIWindow *topWindow(void) {
 %hook CMessageMgr
 - (void)AddEmoticonMsg:(NSString *)msg MsgWrap:(CMessageWrap *)msgWrap {
     if (pref(kGameCheatKey) && [msgWrap m_uiMessageType] == 47 && ([msgWrap m_uiGameType] == 1 || [msgWrap m_uiGameType] == 2)) {
-        // 游戏内容值 1-3=猜拳, 4-9=骰子, 共用数值范围
-        NSArray *items = @[@"✂️ 剪刀", @"🪨 石头", @"🧻 布",
-                           @"⚀ 1", @"⚁ 2", @"⚂ 3", @"⚃ 4", @"⚄ 5", @"⚅ 6"];
+        // 游戏内容值 1-3=猜拳, 4-9=骰子
+        NSArray *items = @[@"剪刀", @"石头", @"布",
+                           @"①", @"②", @"③", @"④", @"⑤", @"⑥"];
         [WcPlusPicker showWithTitle:@"选择结果" items:items handler:^(NSInteger idx) {
             int val = (int)idx + 1;
             id gc = objc_getClass("GameController");
