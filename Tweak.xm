@@ -924,7 +924,31 @@ static BOOL isSeparatorView(UIView *v) {
 %end
 
 // ============================================================
-// 插件收纳隐藏
+// 插件收纳隐藏 (UI 层过滤已注册的)
+// ============================================================
+
+@interface MMTableViewCell : UITableViewCell
+@end
+
+%hook MMTableViewCell
+- (void)didMoveToSuperview {
+    %orig;
+    // 只在插件列表页生效
+    UIResponder *r = self.superview;
+    while (r && ![r isKindOfClass:NSClassFromString(@"WCPluginsViewController")]) r = r.nextResponder;
+    if (!r) return;
+    for (UIView *sub in self.contentView.subviews) {
+        if ([sub isKindOfClass:[UILabel class]]) {
+            NSString *t = [(UILabel *)sub text];
+            if (t.length && isPluginBlocked(t)) { self.hidden = YES; return; }
+        }
+    }
+}
+%end
+
+// ============================================================
+// 插件收纳隐藏 (注册层拦截新注册的)
+// ============================================================
 // ============================================================
 
 @interface WCPluginsMgr : NSObject
