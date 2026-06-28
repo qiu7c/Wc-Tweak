@@ -476,6 +476,11 @@ static UIWindow *topWindow(void) {
 @interface ExtraDeviceLoginViewController : UIViewController
 - (void)onConfirmBtnPress:(id)sender;
 @end
+
+@interface MMServiceCenter : NSObject
++ (id)defaultCenter;
+- (id)getService:(Class)cls;
+@end
 @interface CMessageWrap (GameExt)
 @property (nonatomic, assign) int m_uiGameType;
 - (void)setM_nsEmoticonMD5:(NSString *)md5;
