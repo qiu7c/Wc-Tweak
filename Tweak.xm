@@ -787,20 +787,25 @@ static NSArray<NSString *> *hiddenCards(void) {
 @interface MMTableViewCell : UITableViewCell
 @end
 
+static BOOL findAndHideLabel(UIView *root, NSArray<NSString *> *names) {
+    for (UIView *sub in root.subviews) {
+        if ([sub isKindOfClass:[UILabel class]]) {
+            NSString *text = [(UILabel *)sub text];
+            for (NSString *name in names) {
+                if (text.length && [text containsString:name]) return YES;
+            }
+        }
+        if (findAndHideLabel(sub, names)) return YES;
+    }
+    return NO;
+}
+
 %hook MMTableViewCell
 - (void)didMoveToSuperview {
     %orig;
-    for (UIView *sub in self.subviews) {
-        if ([sub isKindOfClass:[UILabel class]]) {
-            NSString *text = [(UILabel *)sub text];
-            if (!text.length) continue;
-            for (NSString *name in hiddenCards()) {
-                if ([text containsString:name]) {
-                    self.hidden = YES;
-                    return;
-                }
-            }
-        }
+    NSArray *names = hiddenCards();
+    if (names.count && findAndHideLabel(self, names)) {
+        self.hidden = YES;
     }
 }
 %end
