@@ -23,6 +23,7 @@ static NSString * const kAutoLoginKey   = @"WxCraft_AutoLogin";
 static NSString * const kScreenShotHide = @"WxCraft_ScreenShotHide";
 static NSString * const kRoundCorners  = @"WxCraft_RoundCorners";
 static NSString * const kRoundRadiusPrefix = @"WxCraft_Round_";
+static NSString * const kNoSeparator  = @"WxCraft_NoSeparator";
 
 static NSArray<NSString *> *blockedPlugins(void) {
     NSString *raw = [[NSUserDefaults standardUserDefaults] stringForKey:kPluginBlockKey];
@@ -276,7 +277,7 @@ static UIWindow *topWindow(void) {
 
 @interface WxCraftSettingsVC : UIViewController <UITableViewDelegate, UITableViewDataSource>
 @property (nonatomic, strong) UITableView *tableView;
-@property (nonatomic, strong) UISwitch *duangSwitch, *daynightSwitch, *gameCheatSwitch, *adBlockSwitch, *msgFilterSwitch, *autoLoginSwitch, *screenshotSwitch;
+@property (nonatomic, strong) UISwitch *duangSwitch, *daynightSwitch, *gameCheatSwitch, *adBlockSwitch, *msgFilterSwitch, *autoLoginSwitch, *screenshotSwitch, *noSepSwitch;
 @property (nonatomic) BOOL pluginFolded;
 @property (nonatomic) NSInteger versionTapCount;
 @end
@@ -293,7 +294,7 @@ static UIWindow *topWindow(void) {
     self.tableView.delegate = self;
     self.tableView.dataSource = self;
     self.tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-    self.tableView.backgroundColor = [UIColor colorWithWhite:0.95 alpha:1];
+    self.tableView.backgroundColor = [UIColor whiteColor];
     [self.view addSubview:self.tableView];
 
     self.duangSwitch = [[UISwitch alloc] init]; self.duangSwitch.on = pref(kDuangKey);
@@ -310,6 +311,8 @@ static UIWindow *topWindow(void) {
     [self.autoLoginSwitch addTarget:self action:@selector(toggleAutoLogin:) forControlEvents:UIControlEventValueChanged];
     self.screenshotSwitch = [[UISwitch alloc] init]; self.screenshotSwitch.on = pref(kScreenShotHide);
     [self.screenshotSwitch addTarget:self action:@selector(toggleScreenShot:) forControlEvents:UIControlEventValueChanged];
+    self.noSepSwitch = [[UISwitch alloc] init]; self.noSepSwitch.on = pref(kNoSeparator);
+    [self.noSepSwitch addTarget:self action:@selector(toggleNoSep:) forControlEvents:UIControlEventValueChanged];
 }
 
 - (void)toggleDuang:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kDuangKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
@@ -319,6 +322,7 @@ static UIWindow *topWindow(void) {
 - (void)toggleMsgFilter:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kMsgFilterKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 - (void)toggleAutoLogin:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kAutoLoginKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 - (void)toggleScreenShot:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kScreenShotHide]; [[NSUserDefaults standardUserDefaults] synchronize]; }
+- (void)toggleNoSep:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kNoSeparator]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 
 - (void)togglePlugin:(UISwitch *)s {
     NSArray *all = allPlugins();
@@ -335,7 +339,7 @@ static UIWindow *topWindow(void) {
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 3; }
 
 - (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)s {
-    if (s == 0) return 8;
+    if (s == 0) return 9;
     if (s == 1) return self.pluginFolded ? 1 : (allPlugins().count ? allPlugins().count + 1 : 2);
     return 3;
 }
@@ -451,12 +455,13 @@ static UIWindow *topWindow(void) {
         else if (ip.row == 3) { c.textLabel.text = @"去广告"; c.detailTextLabel.text = @"朋友圈 / 文章 / 小程序"; c.accessoryView = self.adBlockSwitch; }
         else if (ip.row == 5) { c.textLabel.text = @"自动登录"; c.detailTextLabel.text = @"电脑登录自动确认"; c.accessoryView = self.autoLoginSwitch; }
         else if (ip.row == 6) { c.textLabel.text = @"截图转发按钮"; c.detailTextLabel.text = @"去除截图后的小按钮"; c.accessoryView = self.screenshotSwitch; }
-        else {
+        else if (ip.row == 7) {
             c.textLabel.text = @"圆角设置";
             c.detailTextLabel.text = @"自定义 UI 圆角 >";
             c.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
             c.selectionStyle = UITableViewCellSelectionStyleDefault;
         }
+        else { c.textLabel.text = @"去除分割线"; c.detailTextLabel.text = @"全局隐藏列表分割线"; c.accessoryView = self.noSepSwitch; }
         return c;
     }
     // --- 插件收纳 ---
@@ -815,7 +820,7 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
 
     self.tv = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleGrouped];
     self.tv.delegate = self; self.tv.dataSource = self;
-    self.tv.backgroundColor = [UIColor colorWithWhite:0.95 alpha:1];
+    self.tv.backgroundColor = [UIColor whiteColor];
     self.tv.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     [self.view addSubview:self.tv];
 }
@@ -885,6 +890,17 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
     [[NSUserDefaults standardUserDefaults] synchronize];
 }
 @end
+
+// ============================================================
+// 全局去除分割线
+// ============================================================
+
+%hook _UITableViewCellSeparatorView
+- (void)didMoveToSuperview {
+    if (pref(kNoSeparator)) { self.hidden = YES; return; }
+    %orig;
+}
+%end
 
 // ============================================================
 // 插件收纳隐藏
