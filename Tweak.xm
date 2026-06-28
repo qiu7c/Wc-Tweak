@@ -25,6 +25,7 @@ static NSString * const kRoundCorners  = @"WxCraft_RoundCorners";
 static NSString * const kRoundRadiusPrefix = @"WxCraft_Round_";
 static NSString * const kNoSeparator  = @"WxCraft_NoSeparator";
 static NSString * const kHideDNDIcon  = @"WxCraft_HideDNDIcon";
+static NSString * const kSwipeInput   = @"WxCraft_SwipeInput";
 
 static NSArray<NSString *> *blockedPlugins(void) {
     NSString *raw = [[NSUserDefaults standardUserDefaults] stringForKey:kPluginBlockKey];
@@ -279,7 +280,7 @@ static UIWindow *topWindow(void) {
 
 @interface WxCraftSettingsVC : UIViewController <UITableViewDelegate, UITableViewDataSource>
 @property (nonatomic, strong) UITableView *tableView;
-@property (nonatomic, strong) UISwitch *duangSwitch, *daynightSwitch, *gameCheatSwitch, *adBlockSwitch, *msgFilterSwitch, *autoLoginSwitch, *screenshotSwitch, *noSepSwitch, *hideDNDSwitch;
+@property (nonatomic, strong) UISwitch *duangSwitch, *daynightSwitch, *gameCheatSwitch, *adBlockSwitch, *msgFilterSwitch, *autoLoginSwitch, *screenshotSwitch, *noSepSwitch, *hideDNDSwitch, *swipeInputSwitch;
 @property (nonatomic) BOOL pluginFolded;
 @property (nonatomic) NSInteger versionTapCount;
 @end
@@ -317,6 +318,8 @@ static UIWindow *topWindow(void) {
     [self.noSepSwitch addTarget:self action:@selector(toggleNoSep:) forControlEvents:UIControlEventValueChanged];
     self.hideDNDSwitch = [[UISwitch alloc] init]; self.hideDNDSwitch.on = pref(kHideDNDIcon);
     [self.hideDNDSwitch addTarget:self action:@selector(toggleHideDND:) forControlEvents:UIControlEventValueChanged];
+    self.swipeInputSwitch = [[UISwitch alloc] init]; self.swipeInputSwitch.on = pref(kSwipeInput);
+    [self.swipeInputSwitch addTarget:self action:@selector(toggleSwipeInput:) forControlEvents:UIControlEventValueChanged];
 }
 
 - (void)toggleDuang:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kDuangKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
@@ -328,6 +331,7 @@ static UIWindow *topWindow(void) {
 - (void)toggleScreenShot:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kScreenShotHide]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 - (void)toggleNoSep:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kNoSeparator]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 - (void)toggleHideDND:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kHideDNDIcon]; [[NSUserDefaults standardUserDefaults] synchronize]; }
+- (void)toggleSwipeInput:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kSwipeInput]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 
 - (void)togglePlugin:(UISwitch *)s {
     NSArray *all = allPlugins();
@@ -344,7 +348,7 @@ static UIWindow *topWindow(void) {
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 3; }
 
 - (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)s {
-    if (s == 0) return 10;
+    if (s == 0) return 11;
     if (s == 1) return self.pluginFolded ? 1 : (allPlugins().count ? allPlugins().count + 1 : 2);
     return 3;
 }
@@ -467,7 +471,8 @@ static UIWindow *topWindow(void) {
             c.selectionStyle = UITableViewCellSelectionStyleDefault;
         }
         else if (ip.row == 8) { c.textLabel.text = @"去除分割线"; c.detailTextLabel.text = @"全局隐藏列表分割线"; c.accessoryView = self.noSepSwitch; }
-        else { c.textLabel.text = @"免打扰图标"; c.detailTextLabel.text = @"隐藏聊天列表的铃铛图标"; c.accessoryView = self.hideDNDSwitch; }
+        else if (ip.row == 9) { c.textLabel.text = @"免打扰图标"; c.detailTextLabel.text = @"隐藏聊天列表的铃铛图标"; c.accessoryView = self.hideDNDSwitch; }
+        else { c.textLabel.text = @"输入框手势"; c.detailTextLabel.text = @"左滑清除 · 右滑粘贴"; c.accessoryView = self.swipeInputSwitch; }
         return c;
     }
     // --- 插件收纳 ---
@@ -776,6 +781,36 @@ static BOOL shouldFilterMsg(CMessageWrap *wrap) {
 
 // ============================================================
 // ============================================================
+// 输入框左滑清除 / 右滑粘贴
+// ============================================================
+
+%hook MMGrowTextView
+- (void)didMoveToSuperview {
+    %orig;
+    if (!pref(kSwipeInput)) return;
+    // 避免重复添加
+    for (UIGestureRecognizer *g in self.gestureRecognizers) {
+        if ([g isKindOfClass:[UISwipeGestureRecognizer class]]) return;
+    }
+    UISwipeGestureRecognizer *l = [[UISwipeGestureRecognizer alloc] initWithTarget:self action:@selector(wxc_clearText)];
+    l.direction = UISwipeGestureRecognizerDirectionLeft;
+    [self addGestureRecognizer:l];
+    UISwipeGestureRecognizer *r = [[UISwipeGestureRecognizer alloc] initWithTarget:self action:@selector(wxc_pasteText)];
+    r.direction = UISwipeGestureRecognizerDirectionRight;
+    [self addGestureRecognizer:r];
+}
+
+%new
+- (void)wxc_clearText { self.text = @""; }
+
+%new
+- (void)wxc_pasteText {
+    NSString *paste = [UIPasteboard generalPasteboard].string;
+    if (paste.length) self.text = paste;
+}
+%end
+
+// ============================================================
 // 万能圆角
 // ============================================================
 
@@ -922,14 +957,21 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
 %hook UIImageView
 - (void)didMoveToSuperview {
     %orig;
+    [self wxc_checkDND];
+}
+
+- (void)layoutSubviews {
+    %orig;
+    [self wxc_checkDND];
+}
+
+%new
+- (void)wxc_checkDND {
     if (!pref(kHideDNDIcon) || !self.superview) return;
     CGFloat w = self.frame.size.width, h = self.frame.size.height;
-    // 免打扰图标特征: 13×13 左右，在聊天列表 Cell 中
-    if (w > 8 && w <= 16 && h > 8 && h <= 16 && self.frame.origin.x > 30) {
-        // 检查是否在聊天列表页
-        UIResponder *r = self.superview;
-        while (r && ![NSStringFromClass(r.class) containsString:@"Session"]) r = r.nextResponder;
-        if (r) { self.hidden = YES; return; }
+    // 免打扰图标: ~13×13, x≈44-46, 在聊天列表 Cell 中
+    if (w >= 12 && w <= 16 && h >= 12 && h <= 16 && self.frame.origin.x > 40 && self.frame.origin.x < 50) {
+        self.hidden = YES; self.alpha = 0;
     }
 }
 %end
