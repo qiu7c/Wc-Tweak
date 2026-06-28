@@ -851,9 +851,9 @@ static BOOL shouldFilterMsg(CMessageWrap *wrap) {
     NSString *hint = [[NSUserDefaults standardUserDefaults] stringForKey:kHintText];
     if (!hint.length) return;
     UILabel *pl = objc_getAssociatedObject(self, "hintLabel");
-    if (self.text.length == 0) {
+    if (self.text.length == 0 && !self.isFirstResponder) {
         if (!pl) {
-            pl = [[UILabel alloc] initWithFrame:CGRectMake(5, 0, self.frame.size.width - 10, self.frame.size.height)];
+            pl = [[UILabel alloc] initWithFrame:CGRectMake(8, 0, self.frame.size.width - 16, self.frame.size.height)];
             pl.text = hint;
             pl.font = [UIFont systemFontOfSize:16];
             pl.textColor = [UIColor colorWithWhite:0.7 alpha:1];
@@ -863,13 +863,18 @@ static BOOL shouldFilterMsg(CMessageWrap *wrap) {
         }
         pl.hidden = NO;
     } else {
-        pl.hidden = YES;
+        if (pl) pl.hidden = YES;
     }
 }
 
 - (void)setText:(NSString *)text {
     %orig;
     [self wxc_updatePlaceholder];
+}
+
+- (BOOL)becomeFirstResponder {
+    [self wxc_updatePlaceholder];
+    return %orig;
 }
 %end
 
