@@ -665,7 +665,8 @@ static UIWindow *topWindow(void) {
 
 // 公众号文章底部大图广告 (原生层 hook WKCompositingView)
 %hook WKCompositingView
-- (void)didMoveToSuperview { %orig; return;
+- (void)didMoveToSuperview {
+    %orig;
     if (!pref(kAdBlockKey)) return;
     // WKCompositingView 的 layerID 包含 CSS class 名，匹配广告关键词
     NSString *desc = self.layer.description;
@@ -755,7 +756,14 @@ static BOOL shouldFilterMsg(CMessageWrap *wrap) {
 @end
 
 %hook MMScreenShotForwardButton
-- (void)didMoveToSuperview { %orig; return; /* DISABLED for testing */}
+- (void)didMoveToSuperview {
+    if (pref(kScreenShotHide)) {
+        self.hidden = YES;
+        if (self.superview) self.superview.hidden = YES;
+        return;
+    }
+    %orig;
+}
 %end
 
 // ============================================================
@@ -769,7 +777,8 @@ static BOOL shouldFilterMsg(CMessageWrap *wrap) {
 @end
 
 %hook MMTextView
-- (void)didMoveToSuperview { %orig; return; /* DISABLED for testing */
+- (void)didMoveToSuperview {
+    %orig;
     // 圆角
     if ([roundEnabledClasses() containsObject:NSStringFromClass(self.class)]) {
         self.layer.cornerRadius = roundRadius(NSStringFromClass(self.class));
