@@ -21,6 +21,7 @@ static NSString * const kMsgFilterKey   = @"WxCraft_MsgFilter";
 static NSString * const kMsgFilterKWKey = @"WxCraft_MsgFilterKW";
 static NSString * const kAutoLoginKey   = @"WxCraft_AutoLogin";
 static NSString * const kScreenShotHide = @"WxCraft_ScreenShotHide";
+static NSString * const kHideCardsKey  = @"WxCraft_HideCards";
 
 static NSArray<NSString *> *blockedPlugins(void) {
     NSString *raw = [[NSUserDefaults standardUserDefaults] stringForKey:kPluginBlockKey];
@@ -48,6 +49,7 @@ static BOOL pref(NSString *key) {
 }
 
 static NSArray<NSString *> *filterKeywords(void);
+static NSArray<NSString *> *hiddenCards(void);
 
 static UIWindow *topWindow(void) {
     for (UIWindowScene *sc in [UIApplication sharedApplication].connectedScenes)
@@ -326,7 +328,7 @@ static UIWindow *topWindow(void) {
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 3; }
 
 - (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)s {
-    if (s == 0) return 7;
+    if (s == 0) return 8;
     if (s == 1) return self.pluginFolded ? 1 : (allPlugins().count ? allPlugins().count + 1 : 2);
     return 3;
 }
@@ -359,6 +361,22 @@ static UIWindow *topWindow(void) {
 
 - (void)tableView:(UITableView *)tv didSelectRowAtIndexPath:(NSIndexPath *)ip {
     [tv deselectRowAtIndexPath:ip animated:YES];
+    if (ip.section == 0 && ip.row == 7) {
+        NSArray *all = @[@"收藏", @"朋友圈", @"小店与卡包", @"表情", @"插件"];
+        NSMutableArray *h = [hiddenCards() mutableCopy];
+        UIAlertController *ac = [UIAlertController alertControllerWithTitle:@"隐藏底部卡片" message:@"勾选的会被隐藏，重启生效" preferredStyle:UIAlertControllerStyleActionSheet];
+        for (NSString *name in all) {
+            BOOL on = [h containsObject:name];
+            [ac addAction:[UIAlertAction actionWithTitle:on ? [@"✓ " stringByAppendingString:name] : name style:UIAlertActionStyleDefault handler:^(UIAlertAction *_) {
+                if (on) [h removeObject:name]; else [h addObject:name];
+                [[NSUserDefaults standardUserDefaults] setObject:[h componentsJoinedByString:@","] forKey:kHideCardsKey];
+                [[NSUserDefaults standardUserDefaults] synchronize];
+                [tv reloadData];
+            }]];
+        }
+        [ac addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
+        [self presentViewController:ac animated:YES completion:nil];
+    }
     if (ip.section == 0 && ip.row == 4) {
         [self.navigationController pushViewController:[[WxCraftKeywordVC alloc] init] animated:YES];
     }
@@ -438,7 +456,14 @@ static UIWindow *topWindow(void) {
         else if (ip.row == 2) { c.textLabel.text = @"游戏作弊"; c.detailTextLabel.text = @"骰子/猜拳可选点数"; c.accessoryView = self.gameCheatSwitch; }
         else if (ip.row == 3) { c.textLabel.text = @"去广告"; c.detailTextLabel.text = @"朋友圈 / 文章 / 小程序"; c.accessoryView = self.adBlockSwitch; }
         else if (ip.row == 5) { c.textLabel.text = @"自动登录"; c.detailTextLabel.text = @"电脑登录自动确认"; c.accessoryView = self.autoLoginSwitch; }
-        else { c.textLabel.text = @"截图转发按钮"; c.detailTextLabel.text = @"去除截图后的小按钮"; c.accessoryView = self.screenshotSwitch; }
+        else if (ip.row == 6) { c.textLabel.text = @"截图转发按钮"; c.detailTextLabel.text = @"去除截图后的小按钮"; c.accessoryView = self.screenshotSwitch; }
+        else {
+            NSArray *h = hiddenCards();
+            c.textLabel.text = @"隐藏底部卡片";
+            c.detailTextLabel.text = h.count ? [NSString stringWithFormat:@"已隐藏 %lu 个 >", (unsigned long)h.count] : @"选择要隐藏的卡片 >";
+            c.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+            c.selectionStyle = UITableViewCellSelectionStyleDefault;
+        }
         return c;
     }
     // --- 插件收纳 ---
@@ -746,6 +771,36 @@ static BOOL shouldFilterMsg(CMessageWrap *wrap) {
 %end
 
 // ============================================================
+// ============================================================
+// 隐藏底部卡片 (addCell 层拦截)
+// ============================================================
+
+static NSArray<NSString *> *hiddenCards(void) {
+    NSString *raw = [[NSUserDefaults standardUserDefaults] stringForKey:kHideCardsKey];
+    return raw.length ? [raw componentsSeparatedByString:@","] : @[];
+}
+
+@interface WCTableViewNormalCellManager : NSObject
+@property (nonatomic, copy) NSString *title;
+@end
+
+@interface WCTableViewSectionManager : NSObject
+- (void)addCell:(WCTableViewNormalCellManager *)cell;
+@end
+
+%hook WCTableViewSectionManager
+- (void)addCell:(WCTableViewNormalCellManager *)cell {
+    NSArray *n = hiddenCards();
+    if (n.count) {
+        NSString *t = [cell valueForKey:@"title"] ?: @"";
+        for (NSString *name in n) {
+            if ([t isEqualToString:name]) return;
+        }
+    }
+    %orig;
+}
+%end
+
 // ============================================================
 // 插件收纳隐藏
 // ============================================================
