@@ -809,8 +809,7 @@ static NSArray<NSString *> *hiddenCards(void) {
     dispatch_async(dispatch_get_main_queue(), ^{
         NSArray *names = hiddenCards();
         if (!names.count) return;
-        for (MMTableViewCell *cell in [self visibleCells]) {
-            if (![cell isKindOfClass:[MMTableViewCell class]]) continue;
+        for (UITableViewCell *cell in [self visibleCells]) {
             for (UIView *sub in cell.subviews) {
                 if ([sub isKindOfClass:[UILabel class]]) {
                     NSString *t = [(UILabel *)sub text];
