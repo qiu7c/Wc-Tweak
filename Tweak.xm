@@ -55,6 +55,7 @@ static BOOL pref(NSString *key) {
 static NSArray<NSString *> *filterKeywords(void);
 static NSSet<NSString *> *roundEnabledClasses(void);
 static NSDictionary<NSString *, NSString *> *roundElements(void);
+static CGFloat roundRadius(NSString *cls);
 static BOOL isSeparatorView(UIView *v);
 
 static UIWindow *topWindow(void) {
