@@ -26,7 +26,6 @@ static NSString * const kRoundRadiusPrefix = @"WxCraft_Round_";
 static NSString * const kNoSeparator  = @"WxCraft_NoSeparator";
 static NSString * const kHideDNDIcon  = @"WxCraft_HideDNDIcon";
 static NSString * const kSwipeInput   = @"WxCraft_SwipeInput";
-static NSString * const kHintText     = @"WxCraft_HintText";
 
 static NSArray<NSString *> *blockedPlugins(void) {
     NSString *raw = [[NSUserDefaults standardUserDefaults] stringForKey:kPluginBlockKey];
@@ -350,7 +349,7 @@ static UIWindow *topWindow(void) {
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 3; }
 
 - (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)s {
-    if (s == 0) return 12;
+    if (s == 0) return 11;
     if (s == 1) return self.pluginFolded ? 1 : (allPlugins().count ? allPlugins().count + 1 : 2);
     return 3;
 }
@@ -383,21 +382,6 @@ static UIWindow *topWindow(void) {
 
 - (void)tableView:(UITableView *)tv didSelectRowAtIndexPath:(NSIndexPath *)ip {
     [tv deselectRowAtIndexPath:ip animated:YES];
-    if (ip.section == 0 && ip.row == 11) {
-        UIAlertController *ac = [UIAlertController alertControllerWithTitle:@"占位文字" message:@"输入框为空时显示的文字，留空则恢复默认" preferredStyle:UIAlertControllerStyleAlert];
-        [ac addTextFieldWithConfigurationHandler:^(UITextField *tf) {
-            tf.text = [[NSUserDefaults standardUserDefaults] stringForKey:kHintText] ?: @"";
-            tf.placeholder = @"输入占位文字...";
-        }];
-        [ac addAction:[UIAlertAction actionWithTitle:@"保存" style:UIAlertActionStyleDefault handler:^(UIAlertAction *_) {
-            NSString *t = ac.textFields.firstObject.text;
-            [[NSUserDefaults standardUserDefaults] setObject:t.length ? t : @"" forKey:kHintText];
-            [[NSUserDefaults standardUserDefaults] synchronize];
-            [tv reloadRowsAtIndexPaths:@[ip] withRowAnimation:UITableViewRowAnimationNone];
-        }]];
-        [ac addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
-        [self presentViewController:ac animated:YES completion:nil];
-    }
     if (ip.section == 0 && ip.row == 7) {
         [self.navigationController pushViewController:[[WxCraftKeywordVC alloc] init] animated:YES];
     }
@@ -486,14 +470,7 @@ static UIWindow *topWindow(void) {
         }
         else if (ip.row == 8) { c.textLabel.text = @"去除分割线"; c.detailTextLabel.text = @"全局隐藏列表分割线"; c.accessoryView = self.noSepSwitch; }
         else if (ip.row == 9) { c.textLabel.text = @"免打扰图标"; c.detailTextLabel.text = @"隐藏聊天列表的铃铛图标"; c.accessoryView = self.hideDNDSwitch; }
-        else if (ip.row == 10) { c.textLabel.text = @"输入框手势"; c.detailTextLabel.text = @"左滑清除 · 右滑粘贴"; c.accessoryView = self.swipeInputSwitch; }
-        else {
-            NSString *h = [[NSUserDefaults standardUserDefaults] stringForKey:kHintText];
-            c.textLabel.text = @"输入框占位文字";
-            c.detailTextLabel.text = h.length ? [NSString stringWithFormat:@"%@ >", h] : @"设置 >";
-            c.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
-            c.selectionStyle = UITableViewCellSelectionStyleDefault;
-        }
+        else { c.textLabel.text = @"输入框手势"; c.detailTextLabel.text = @"左滑清除 · 右滑粘贴"; c.accessoryView = self.swipeInputSwitch; }
         return c;
     }
     // --- 插件收纳 ---
@@ -806,7 +783,6 @@ static BOOL shouldFilterMsg(CMessageWrap *wrap) {
 
 @interface MMTextView : UITextView
 @property (nonatomic, copy) NSString *text;
-- (void)wxc_updatePlaceholder;
 - (void)wxc_clearText;
 - (void)wxc_pasteText;
 @end
@@ -819,9 +795,6 @@ static BOOL shouldFilterMsg(CMessageWrap *wrap) {
         self.layer.cornerRadius = roundRadius(NSStringFromClass(self.class));
         self.clipsToBounds = YES;
     }
-    // 自定义占位文字
-    [self wxc_updatePlaceholder];
-
     // 手势
     if (!pref(kSwipeInput)) return;
     for (UIGestureRecognizer *g in self.gestureRecognizers) {
@@ -842,37 +815,6 @@ static BOOL shouldFilterMsg(CMessageWrap *wrap) {
 - (void)wxc_pasteText {
     NSString *paste = [UIPasteboard generalPasteboard].string;
     if (paste.length) self.text = paste;
-}
-
-%new
-- (void)wxc_updatePlaceholder {
-    NSString *hint = [[NSUserDefaults standardUserDefaults] stringForKey:kHintText];
-    if (!hint.length) return;
-    UILabel *pl = objc_getAssociatedObject(self, "hintLabel");
-    if (self.text.length == 0 && !self.isFirstResponder) {
-        if (!pl) {
-            pl = [[UILabel alloc] initWithFrame:CGRectMake(8, 0, self.frame.size.width - 16, self.frame.size.height)];
-            pl.text = hint;
-            pl.font = [UIFont systemFontOfSize:16];
-            pl.textColor = [UIColor colorWithWhite:0.7 alpha:1];
-            pl.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-            objc_setAssociatedObject(self, "hintLabel", pl, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-            [self addSubview:pl];
-        }
-        pl.hidden = NO;
-    } else {
-        if (pl) pl.hidden = YES;
-    }
-}
-
-- (void)setText:(NSString *)text {
-    %orig;
-    [self wxc_updatePlaceholder];
-}
-
-- (BOOL)becomeFirstResponder {
-    [self wxc_updatePlaceholder];
-    return %orig;
 }
 %end
 
