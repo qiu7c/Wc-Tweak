@@ -310,14 +310,6 @@ static UIWindow *topWindow(void) {
     [[NSUserDefaults standardUserDefaults] synchronize];
 }
 
-#define SWITCH_CELL(key, title, sub, sel) \
-    c.textLabel.text = title; c.detailTextLabel.text = sub; \
-    c.accessoryView = [self sw:key]; \
-    [(UISwitch *)c.accessoryView addTarget:self action:@selector(sel:) forControlEvents:UIControlEventValueChanged]
-
-#define NAV_CELL(title, sub) \
-    c.textLabel.text = title; c.detailTextLabel.text = sub; \
-    c.accessoryType = UITableViewCellAccessoryDisclosureIndicator; c.selectionStyle = UITableViewCellSelectionStyleDefault
 
 // ---- TableView ----
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 4; }
@@ -394,19 +386,41 @@ static UIWindow *topWindow(void) {
 
     // S0: 聊天增强
     if (ip.section == 0) {
-        if (ip.row == 0) { SWITCH_CELL(kDuangKey, @"小信号弹窗 (Duang)", @"恢复召唤弹窗", toggleDuang); }
-        else if (ip.row == 1) { SWITCH_CELL(kGameCheatKey, @"游戏作弊", @"骰子/猜拳自由选择", toggleGCheat); }
-        else if (ip.row == 2) { SWITCH_CELL(kSwipeInput, @"输入框手势", @"左滑清除 · 右滑粘贴", toggleSwipe); }
-        else { NAV_CELL(@"圆角设置", @"定制 UI 圆角"); }
+        if (ip.row == 0) {
+            c.textLabel.text = @"小信号弹窗 (Duang)"; c.detailTextLabel.text = @"恢复召唤弹窗"; c.accessoryView = [self sw:kDuangKey];
+            [(UISwitch *)c.accessoryView addTarget:self action:@selector(toggleDuang:) forControlEvents:UIControlEventValueChanged];
+        } else if (ip.row == 1) {
+            c.textLabel.text = @"游戏作弊"; c.detailTextLabel.text = @"骰子/猜拳自由选择"; c.accessoryView = [self sw:kGameCheatKey];
+            [(UISwitch *)c.accessoryView addTarget:self action:@selector(toggleGCheat:) forControlEvents:UIControlEventValueChanged];
+        } else if (ip.row == 2) {
+            c.textLabel.text = @"输入框手势"; c.detailTextLabel.text = @"左滑清除 · 右滑粘贴"; c.accessoryView = [self sw:kSwipeInput];
+            [(UISwitch *)c.accessoryView addTarget:self action:@selector(toggleSwipe:) forControlEvents:UIControlEventValueChanged];
+        } else {
+            c.textLabel.text = @"圆角设置"; c.detailTextLabel.text = @"定制 UI 圆角";
+            c.accessoryType = UITableViewCellAccessoryDisclosureIndicator; c.selectionStyle = UITableViewCellSelectionStyleDefault;
+        }
         return c;
     }
     // S1: 界面
     if (ip.section == 1) {
-        if (ip.row == 0) { SWITCH_CELL(kAdBlockKey, @"去广告", @"朋友圈/文章/小程序", toggleAd); }
-        else if (ip.row == 1) { SWITCH_CELL(kNoSeparator, @"去除分割线", @"全局隐藏列表分割线", toggleSep); }
-        else if (ip.row == 2) { SWITCH_CELL(kHideDNDIcon, @"免打扰图标", @"隐藏聊表铃铛图标", toggleDND); }
-        else if (ip.row == 3) { SWITCH_CELL(kScreenShotHide, @"截图转发按钮", @"去除截图后小按钮", toggleShot); }
-        else { SWITCH_CELL(kMsgFilterKey, @"消息过滤", [NSString stringWithFormat:@"%ld 个关键词", (long)filterKeywords().count], toggleFilter); c.accessoryType = UITableViewCellAccessoryDisclosureIndicator; c.selectionStyle = UITableViewCellSelectionStyleDefault; }
+        if (ip.row == 0) {
+            c.textLabel.text = @"去广告"; c.detailTextLabel.text = @"朋友圈/文章/小程序"; c.accessoryView = [self sw:kAdBlockKey];
+            [(UISwitch *)c.accessoryView addTarget:self action:@selector(toggleAd:) forControlEvents:UIControlEventValueChanged];
+        } else if (ip.row == 1) {
+            c.textLabel.text = @"去除分割线"; c.detailTextLabel.text = @"全局隐藏列表分割线"; c.accessoryView = [self sw:kNoSeparator];
+            [(UISwitch *)c.accessoryView addTarget:self action:@selector(toggleSep:) forControlEvents:UIControlEventValueChanged];
+        } else if (ip.row == 2) {
+            c.textLabel.text = @"免打扰图标"; c.detailTextLabel.text = @"隐藏聊表铃铛图标"; c.accessoryView = [self sw:kHideDNDIcon];
+            [(UISwitch *)c.accessoryView addTarget:self action:@selector(toggleDND:) forControlEvents:UIControlEventValueChanged];
+        } else if (ip.row == 3) {
+            c.textLabel.text = @"截图转发按钮"; c.detailTextLabel.text = @"去除截图后小按钮"; c.accessoryView = [self sw:kScreenShotHide];
+            [(UISwitch *)c.accessoryView addTarget:self action:@selector(toggleShot:) forControlEvents:UIControlEventValueChanged];
+        } else {
+            c.textLabel.text = @"消息过滤"; c.detailTextLabel.text = [NSString stringWithFormat:@"%ld 个关键词", (long)filterKeywords().count];
+            c.accessoryView = [self sw:kMsgFilterKey];
+            [(UISwitch *)c.accessoryView addTarget:self action:@selector(toggleFilter:) forControlEvents:UIControlEventValueChanged];
+            c.accessoryType = UITableViewCellAccessoryDisclosureIndicator; c.selectionStyle = UITableViewCellSelectionStyleDefault;
+        }
         return c;
     }
     // S2: 插件收纳
