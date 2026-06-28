@@ -382,22 +382,19 @@ static UIWindow *topWindow(void) {
 
 %hook CMessageMgr
 - (void)AddEmoticonMsg:(NSString *)msg MsgWrap:(CMessageWrap *)msgWrap {
-    if (pref(kGameCheatKey) && [msgWrap m_uiMessageType] == 47) {
-        int gt = [msgWrap m_uiGameType];
-        if (gt == 1 || gt == 2) {
-            NSArray *items = gt == 1 ? @[@"剪刀 ✂️", @"石头 🪨", @"布 🧻"] : @[@"⚀", @"⚁", @"⚂", @"⚃", @"⚄", @"⚅"];
-            [WcPlusPicker showWithTitle: gt == 1 ? @"猜拳" : @"骰子"
-                                  items: items
-                                handler:^(NSInteger idx) {
-                int val = (int)idx + 1;
-                id gc = objc_getClass("GameController");
-                NSString *md5 = ((NSString *(*)(id, SEL, int))objc_msgSend)(gc, @selector(getMD5ByGameContent:), val);
-                [msgWrap setM_nsEmoticonMD5:md5];
-                [msgWrap setM_uiGameContent:val];
-                %orig(msg, msgWrap);
-            }];
-            return;
-        }
+    if (pref(kGameCheatKey) && [msgWrap m_uiMessageType] == 47 && ([msgWrap m_uiGameType] == 1 || [msgWrap m_uiGameType] == 2)) {
+        // 游戏内容值 1-3=猜拳, 4-9=骰子, 共用数值范围
+        NSArray *items = @[@"✂️ 剪刀", @"🪨 石头", @"🧻 布",
+                           @"⚀ 1", @"⚁ 2", @"⚂ 3", @"⚃ 4", @"⚄ 5", @"⚅ 6"];
+        [WcPlusPicker showWithTitle:@"选择结果" items:items handler:^(NSInteger idx) {
+            int val = (int)idx + 1;
+            id gc = objc_getClass("GameController");
+            NSString *md5 = ((NSString *(*)(id, SEL, int))objc_msgSend)(gc, @selector(getMD5ByGameContent:), val);
+            [msgWrap setM_nsEmoticonMD5:md5];
+            [msgWrap setM_uiGameContent:val];
+            %orig(msg, msgWrap);
+        }];
+        return;
     }
     %orig;
 }
