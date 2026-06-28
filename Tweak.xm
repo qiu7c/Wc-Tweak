@@ -835,7 +835,7 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
     return @{
         @"MMGrowTextView":          @"聊天输入框",
         @"InputToolContainerView":  @"输入工具容器",
-        @"SearchStackView":         @"搜索框",
+        @"SearchFieldView":         @"搜索框",
     };
 }
 
@@ -850,13 +850,13 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
         return;
     }
 
-    // 搜索框特殊处理 (UIStackView inside WCSearchBar)
-    if ([roundEnabledClasses() containsObject:@"SearchStackView"] &&
-        [self isKindOfClass:[UIStackView class]] &&
-        [NSStringFromClass(self.superview.class) isEqualToString:@"WCSearchBar"]) {
-        self.layer.cornerRadius = roundRadius(@"SearchStackView");
+    // 搜索框特殊处理 (UIView inside WCSearchBar, 按 SearchFieldView 配置)
+    if ([roundEnabledClasses() containsObject:@"SearchFieldView"] &&
+        [NSStringFromClass(self.superview.class) isEqualToString:@"WCSearchBar"] &&
+        [NSStringFromClass(self.class) isEqualToString:@"UIView"] &&
+        self.frame.size.width > 300 && self.frame.size.height > 20 && self.frame.size.height < 35) {
+        self.layer.cornerRadius = roundRadius(@"SearchFieldView");
         self.clipsToBounds = YES;
-        return;
     }
 
     // 自定义圆角
