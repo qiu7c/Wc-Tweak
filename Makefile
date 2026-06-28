@@ -11,11 +11,11 @@ INSTALL_TARGET_PROCESSES = SpringBoard
 
 include $(THEOS)/makefiles/common.mk
 
-TWEAK_NAME = ForeignAppEnhancer
+TWEAK_NAME = WcPlus
 
 # 源文件
-ForeignAppEnhancer_FILES = Tweak.xm
-ForeignAppEnhancer_CFLAGS = -fobjc-arc
-ForeignAppEnhancer_FRAMEWORKS = UIKit Foundation
+WcPlus_FILES = Tweak.xm
+WcPlus_CFLAGS = -fobjc-arc
+WcPlus_FRAMEWORKS = UIKit Foundation
 
 include $(THEOS_MAKE_PATH)/tweak.mk

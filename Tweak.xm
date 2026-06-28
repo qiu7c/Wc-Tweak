@@ -1,35 +1,32 @@
-// ForeignAppEnhancer
+// Wc+
 // 作者: CC
-// 功能: 重新启用小信号弹窗 + 更多增强
+// 微信增强插件
 
 #import <UIKit/UIKit.h>
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
 #import <objc/message.h>
 
-// ============================================================
-// 开关 Key（与 WCPluginsMgr 注册的 key 一致）
-// ============================================================
-static NSString * const kDuangSwitchKey = @"WCDuang_Switch";
+static NSString * const kDuangSwitchKey = @"WcPlus_Duang_Switch";
 
-// 读取开关状态
 static BOOL isDuangEnabled(void) {
     return [[NSUserDefaults standardUserDefaults] boolForKey:kDuangSwitchKey];
 }
 
 // ============================================================
-// 设置页面
+// 设置页面（开关内置）
 // ============================================================
 
-@interface ForeignSettingsVC : UIViewController <UITableViewDelegate, UITableViewDataSource>
+@interface WcPlusSettingsVC : UIViewController <UITableViewDelegate, UITableViewDataSource>
 @property (nonatomic, strong) UITableView *tableView;
+@property (nonatomic, strong) UISwitch *duangSwitch;
 @end
 
-@implementation ForeignSettingsVC
+@implementation WcPlusSettingsVC
 
 - (void)viewDidLoad {
     [super viewDidLoad];
-    self.title = @"ForeignAppEnhancer";
+    self.title = @"Wc+";
     self.view.backgroundColor = [UIColor systemGroupedBackgroundColor];
 
     self.tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleInsetGrouped];
@@ -37,49 +34,60 @@ static BOOL isDuangEnabled(void) {
     self.tableView.dataSource = self;
     self.tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     [self.view addSubview:self.tableView];
+
+    self.duangSwitch = [[UISwitch alloc] init];
+    self.duangSwitch.on = isDuangEnabled();
+    [self.duangSwitch addTarget:self action:@selector(duangToggled:) forControlEvents:UIControlEventValueChanged];
+}
+
+- (void)duangToggled:(UISwitch *)sender {
+    [[NSUserDefaults standardUserDefaults] setBool:sender.isOn forKey:kDuangSwitchKey];
+    [[NSUserDefaults standardUserDefaults] synchronize];
 }
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
-    return 3;
+    return 2;
 }
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-    if (section == 0) return 2;
-    if (section == 1) return 1;
-    return 1;
+    return section == 0 ? 2 : 1;
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
-    if (section == 0) return @"作者";
-    if (section == 1) return @"功能";
-    return @"关于";
+    return section == 0 ? @"功能" : @"关于";
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-    static NSString *cid = @"cell";
-    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:cid];
-    if (!cell) {
-        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:cid];
-        cell.selectionStyle = UITableViewCellSelectionStyleNone;
-    }
-
     if (indexPath.section == 0) {
         if (indexPath.row == 0) {
-            cell.textLabel.text = @"作者";
-            cell.detailTextLabel.text = @"CC";
+            UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"duang"];
+            if (!cell) {
+                cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"duang"];
+                cell.selectionStyle = UITableViewCellSelectionStyleNone;
+                cell.textLabel.text = @"小信号弹窗 (Duang)";
+                cell.accessoryView = self.duangSwitch;
+            }
+            return cell;
         } else {
-            cell.textLabel.text = @"联系方式";
-            cell.detailTextLabel.text = @"js8887@126.com";
+            UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"info"];
+            if (!cell) {
+                cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:@"info"];
+                cell.selectionStyle = UITableViewCellSelectionStyleNone;
+            }
+            cell.textLabel.text = @"说明";
+            cell.detailTextLabel.text = @"恢复微信 8.0.31+ 小信号弹窗";
+            return cell;
         }
-    } else if (indexPath.section == 1) {
-        cell.textLabel.text = @"小信号弹窗 (Duang)";
-        cell.detailTextLabel.text = isDuangEnabled() ? @"已开启" : @"已关闭";
-        cell.selectionStyle = UITableViewCellSelectionStyleNone;
-    } else {
-        cell.textLabel.text = @"版本";
-        cell.detailTextLabel.text = @"1.0.0";
     }
 
+    // 关于
+    UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:@"about"];
+    if (!cell) {
+        cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleValue1 reuseIdentifier:@"about"];
+        cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    }
+    cell.textLabel.text = @"作者";
+    cell.detailTextLabel.text = @"CC";
     return cell;
 }
 
@@ -132,29 +140,19 @@ static BOOL isDuangEnabled(void) {
 %end
 
 // ============================================================
-// 注册到 WCPluginsMgr
+// 注册
 // ============================================================
 
 %ctor {
     Class mgr = NSClassFromString(@"WCPluginsMgr");
     if (mgr) {
         id instance = ((id (*)(id, SEL))objc_msgSend)(mgr, @selector(sharedInstance));
-
-        // 注册设置页面
         ((void (*)(id, SEL, NSString *, NSString *, NSString *))objc_msgSend)(
             instance,
             @selector(registerControllerWithTitle:version:controller:),
-            @"ForeignAppEnhancer",
+            @"Wc+",
             @"1.0.0",
-            @"ForeignSettingsVC"
-        );
-
-        // 注册小信号开关
-        ((void (*)(id, SEL, NSString *, NSString *))objc_msgSend)(
-            instance,
-            @selector(registerSwitchWithTitle:key:),
-            @"小信号弹窗 (Duang)",
-            kDuangSwitchKey
+            @"WcPlusSettingsVC"
         );
     }
 }
