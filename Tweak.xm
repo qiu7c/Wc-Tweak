@@ -797,6 +797,14 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
 - (void)didMoveToSuperview {
     %orig;
     if (!self.superview) return;
+
+    // 全局分割线隐藏
+    if (pref(kNoSeparator) && ![self isKindOfClass:[UITableViewCell class]] && isSeparatorView(self)) {
+        self.hidden = YES;
+        return;
+    }
+
+    // 自定义圆角
     NSString *cls = NSStringFromClass(self.class);
     if ([roundEnabledClasses() containsObject:cls]) {
         CGFloat r = roundRadius(cls);
@@ -897,6 +905,15 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
 
 @interface _UITableViewCellSeparatorView : UIView
 @end
+
+static BOOL isSeparatorView(UIView *v) {
+    CGFloat h = v.frame.size.height;
+    CGFloat pw = v.superview.frame.size.width;
+    if (h > 0 && h <= 1.5 && v.frame.size.width >= pw - 10) return YES;
+    // UIVisualEffectView 型分割线
+    if ([NSStringFromClass(v.class) containsString:@"Separator"]) return YES;
+    return NO;
+}
 
 %hook _UITableViewCellSeparatorView
 - (void)didMoveToSuperview {
