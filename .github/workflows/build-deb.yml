@@ -15,13 +15,13 @@ jobs:
 
       - name: Setup Theos
         run: |
-          export THEOS=/opt/theos
+          export THEOS=$HOME/theos
           echo "THEOS=$THEOS" >> $GITHUB_ENV
           git clone --depth 1 https://github.com/theos/theos.git $THEOS --quiet
 
       - name: Build package
         run: |
-          export THEOS=/opt/theos
+          export THEOS=$HOME/theos
           make clean package FINALPACKAGE=1
 
       - name: Upload DEB
