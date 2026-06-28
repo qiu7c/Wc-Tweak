@@ -895,6 +895,9 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
 // 全局去除分割线
 // ============================================================
 
+@interface _UITableViewCellSeparatorView : UIView
+@end
+
 %hook _UITableViewCellSeparatorView
 - (void)didMoveToSuperview {
     if (pref(kNoSeparator)) { self.hidden = YES; return; }
