@@ -271,7 +271,9 @@ static UIWindow *topWindow(void) {
 // 设置主页
 // ============================================================
 
-@interface WxCraftRoundVC : UIViewController
+@interface WxCraftRoundVC : UIViewController <UITableViewDelegate, UITableViewDataSource>
+@property (nonatomic, strong) UITableView *tv;
+@property (nonatomic, strong) NSMutableSet<NSString *> *enabled;
 @end
 
 @interface WxCraftSettingsVC : UIViewController <UITableViewDelegate, UITableViewDataSource>
@@ -801,11 +803,6 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
 %end
 
 // 圆角管理页
-@interface WxCraftRoundVC : UIViewController <UITableViewDelegate, UITableViewDataSource>
-@property (nonatomic, strong) UITableView *tv;
-@property (nonatomic, strong) NSMutableSet<NSString *> *enabled;
-@end
-
 @implementation WxCraftRoundVC
 
 - (void)viewDidLoad {
