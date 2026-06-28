@@ -184,6 +184,10 @@ static BOOL pref(NSString *key) {
 - (void)AddEmoticonMsg:(NSString *)msg MsgWrap:(CMessageWrap *)msgWrap;
 @end
 
+@interface GameController : NSObject
++ (NSString *)getMD5ByGameContent:(int)content;
+@end
+
 @interface CMessageWrap (GameExt)
 @property (nonatomic, assign) int m_uiGameType;
 @property (nonatomic, assign) int m_uiGameContent;
@@ -211,7 +215,14 @@ static BOOL pref(NSString *key) {
             [alert addAction:act];
         }
         [alert addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
-        [[[UIApplication sharedApplication] keyWindow].rootViewController presentViewController:alert animated:YES completion:nil];
+        UIWindow *kw = nil;
+        for (UIWindowScene *scene in [UIApplication sharedApplication].connectedScenes) {
+            if (scene.activationState == UISceneActivationStateForegroundActive) {
+                kw = scene.windows.firstObject; break;
+            }
+        }
+        if (!kw) kw = [UIApplication sharedApplication].windows.firstObject;
+        [kw.rootViewController presentViewController:alert animated:YES completion:nil];
         return;
     }
     %orig;
