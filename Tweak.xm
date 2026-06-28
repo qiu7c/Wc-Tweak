@@ -21,6 +21,7 @@ static NSString * const kMsgFilterKey   = @"WxCraft_MsgFilter";
 static NSString * const kMsgFilterKWKey = @"WxCraft_MsgFilterKW";
 static NSString * const kAutoLoginKey   = @"WxCraft_AutoLogin";
 static NSString * const kScreenShotHide = @"WxCraft_ScreenShotHide";
+static NSString * const kRoundInput   = @"WxCraft_RoundInput";
 
 static NSArray<NSString *> *blockedPlugins(void) {
     NSString *raw = [[NSUserDefaults standardUserDefaults] stringForKey:kPluginBlockKey];
@@ -267,7 +268,7 @@ static UIWindow *topWindow(void) {
 
 @interface WxCraftSettingsVC : UIViewController <UITableViewDelegate, UITableViewDataSource>
 @property (nonatomic, strong) UITableView *tableView;
-@property (nonatomic, strong) UISwitch *duangSwitch, *daynightSwitch, *gameCheatSwitch, *adBlockSwitch, *msgFilterSwitch, *autoLoginSwitch, *screenshotSwitch;
+@property (nonatomic, strong) UISwitch *duangSwitch, *daynightSwitch, *gameCheatSwitch, *adBlockSwitch, *msgFilterSwitch, *autoLoginSwitch, *screenshotSwitch, *roundInputSwitch;
 @property (nonatomic) BOOL pluginFolded;
 @property (nonatomic) NSInteger versionTapCount;
 @end
@@ -301,6 +302,8 @@ static UIWindow *topWindow(void) {
     [self.autoLoginSwitch addTarget:self action:@selector(toggleAutoLogin:) forControlEvents:UIControlEventValueChanged];
     self.screenshotSwitch = [[UISwitch alloc] init]; self.screenshotSwitch.on = pref(kScreenShotHide);
     [self.screenshotSwitch addTarget:self action:@selector(toggleScreenShot:) forControlEvents:UIControlEventValueChanged];
+    self.roundInputSwitch = [[UISwitch alloc] init]; self.roundInputSwitch.on = pref(kRoundInput);
+    [self.roundInputSwitch addTarget:self action:@selector(toggleRoundInput:) forControlEvents:UIControlEventValueChanged];
 }
 
 - (void)toggleDuang:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kDuangKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
@@ -310,6 +313,7 @@ static UIWindow *topWindow(void) {
 - (void)toggleMsgFilter:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kMsgFilterKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 - (void)toggleAutoLogin:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kAutoLoginKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 - (void)toggleScreenShot:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kScreenShotHide]; [[NSUserDefaults standardUserDefaults] synchronize]; }
+- (void)toggleRoundInput:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kRoundInput]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 
 - (void)togglePlugin:(UISwitch *)s {
     NSArray *all = allPlugins();
@@ -326,7 +330,7 @@ static UIWindow *topWindow(void) {
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 3; }
 
 - (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)s {
-    if (s == 0) return 7;
+    if (s == 0) return 8;
     if (s == 1) return self.pluginFolded ? 1 : (allPlugins().count ? allPlugins().count + 1 : 2);
     return 3;
 }
@@ -438,7 +442,8 @@ static UIWindow *topWindow(void) {
         else if (ip.row == 2) { c.textLabel.text = @"游戏作弊"; c.detailTextLabel.text = @"骰子/猜拳可选点数"; c.accessoryView = self.gameCheatSwitch; }
         else if (ip.row == 3) { c.textLabel.text = @"去广告"; c.detailTextLabel.text = @"朋友圈 / 文章 / 小程序"; c.accessoryView = self.adBlockSwitch; }
         else if (ip.row == 5) { c.textLabel.text = @"自动登录"; c.detailTextLabel.text = @"电脑登录自动确认"; c.accessoryView = self.autoLoginSwitch; }
-        else { c.textLabel.text = @"截图转发按钮"; c.detailTextLabel.text = @"去除截图后的小按钮"; c.accessoryView = self.screenshotSwitch; }
+        else if (ip.row == 6) { c.textLabel.text = @"截图转发按钮"; c.detailTextLabel.text = @"去除截图后的小按钮"; c.accessoryView = self.screenshotSwitch; }
+        else { c.textLabel.text = @"输入框圆角"; c.detailTextLabel.text = @"聊天输入框圆润样式"; c.accessoryView = self.roundInputSwitch; }
         return c;
     }
     // --- 插件收纳 ---
@@ -746,6 +751,23 @@ static BOOL shouldFilterMsg(CMessageWrap *wrap) {
 %end
 
 // ============================================================
+// ============================================================
+// 聊天输入框圆角
+// ============================================================
+
+@interface MMGrowTextView : UITextView
+@end
+
+%hook MMGrowTextView
+- (void)didMoveToSuperview {
+    %orig;
+    if (pref(kRoundInput)) {
+        self.layer.cornerRadius = self.frame.size.height / 2;
+        self.clipsToBounds = YES;
+    }
+}
+%end
+
 // ============================================================
 // 插件收纳隐藏
 // ============================================================
