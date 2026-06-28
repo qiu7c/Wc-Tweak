@@ -800,13 +800,13 @@ static NSArray<NSString *> *hiddenCards(void) {
 @end
 
 %hook WCTableViewSectionManager
-- (void)addCell:(WCTableViewNormalCellManager *)cell {
+- (void)addCell:(id)cell {
     NSArray *names = hiddenCards();
     if (names.count && [cell respondsToSelector:@selector(title)]) {
-        NSString *t = cell.title;
-        if (!t.length && [cell respondsToSelector:@selector(m_title)]) t = cell.m_title;
+        NSString *t = [cell title];
+        if (!t.length && [cell respondsToSelector:@selector(m_title)]) t = [cell m_title];
         for (NSString *name in names) {
-            if (t.length && [t containsString:name]) return; // skip this cell
+            if (t.length && [t containsString:name]) return;
         }
     }
     %orig;
