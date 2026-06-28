@@ -799,21 +799,38 @@ static NSArray<NSString *> *hiddenCards(void) {
 - (void)addCell:(id)cell;
 @end
 
-%hook WCTableViewNormalCellManager
-+ (id)normalCellForSel:(SEL)sel target:(id)target title:(NSString *)title accessoryType:(int)type {
-    NSArray *names = hiddenCards();
-    for (NSString *name in names) {
-        if (title.length && [title containsString:name]) return nil;
-    }
-    return %orig;
-}
+// Hook TextStateProfileTableView → 强制刷新 + 隐藏匹配 Cell
+@interface TextStateProfileTableView : UITableView
+@end
 
-+ (id)normalCellForSel:(SEL)sel target:(id)target title:(NSString *)title rightValue:(NSString *)right accessoryType:(int)type {
-    NSArray *names = hiddenCards();
-    for (NSString *name in names) {
-        if (title.length && [title containsString:name]) return nil;
-    }
-    return %orig;
+%hook TextStateProfileTableView
+- (void)reloadData {
+    %orig;
+    dispatch_async(dispatch_get_main_queue(), ^{
+        NSArray *names = hiddenCards();
+        if (!names.count) return;
+        CGFloat yOffset = 0;
+        CGFloat prevBottom = 0;
+        for (MMTableViewCell *cell in [self visibleCells]) {
+            if (![cell isKindOfClass:[MMTableViewCell class]]) continue;
+            for (UIView *sub in cell.subviews) {
+                if ([sub isKindOfClass:[UILabel class]]) {
+                    NSString *t = [(UILabel *)sub text];
+                    BOOL matched = NO;
+                    for (NSString *name in names) {
+                        if (t.length && [t containsString:name]) { matched = YES; break; }
+                    }
+                    if (matched) {
+                        cell.hidden = YES;
+                        cell.alpha = 0;
+                    }
+                    break;
+                }
+            }
+        }
+        [self beginUpdates];
+        [self endUpdates];
+    });
 }
 %end
 
