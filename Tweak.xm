@@ -20,6 +20,7 @@ static NSString * const kAdBlockKey    = @"WxCraft_AdBlock";
 static NSString * const kMsgFilterKey   = @"WxCraft_MsgFilter";
 static NSString * const kMsgFilterKWKey = @"WxCraft_MsgFilterKW";
 static NSString * const kAutoLoginKey   = @"WxCraft_AutoLogin";
+static NSString * const kDPIScaleKey   = @"WxCraft_DPIScale";
 
 static NSArray<NSString *> *blockedPlugins(void) {
     NSString *raw = [[NSUserDefaults standardUserDefaults] stringForKey:kPluginBlockKey];
@@ -47,6 +48,27 @@ static BOOL pref(NSString *key) {
 }
 
 static NSArray<NSString *> *filterKeywords(void);
+
+static CGFloat dpiScale(void) {
+    CGFloat v = [[NSUserDefaults standardUserDefaults] floatForKey:kDPIScaleKey];
+    return (v >= 0.7 && v <= 1.0) ? v : 1.0;
+}
+
+// ============================================================
+// 界面缩放: hook UIFont 缩小系统字体
+// ============================================================
+
+%hook UIFont
++ (UIFont *)systemFontOfSize:(CGFloat)size {
+    return %orig(size * dpiScale());
+}
++ (UIFont *)systemFontOfSize:(CGFloat)size weight:(UIFontWeight)weight {
+    return %orig(size * dpiScale(), weight);
+}
++ (UIFont *)boldSystemFontOfSize:(CGFloat)size {
+    return %orig(size * dpiScale());
+}
+%end
 static UIWindow *topWindow(void) {
     for (UIWindowScene *sc in [UIApplication sharedApplication].connectedScenes)
         if (sc.activationState == UISceneActivationStateForegroundActive)
@@ -321,7 +343,7 @@ static UIWindow *topWindow(void) {
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 3; }
 
 - (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)s {
-    if (s == 0) return 6;
+    if (s == 0) return 7;
     if (s == 1) return self.pluginFolded ? 1 : (allPlugins().count ? allPlugins().count + 1 : 2);
     return 3;
 }
@@ -354,6 +376,15 @@ static UIWindow *topWindow(void) {
 
 - (void)tableView:(UITableView *)tv didSelectRowAtIndexPath:(NSIndexPath *)ip {
     [tv deselectRowAtIndexPath:ip animated:YES];
+    if (ip.section == 0 && ip.row == 6) {
+        NSArray *scales = @[@"100%", @"95%", @"90%", @"85%", @"80%", @"75%", @"70%"];
+        [WxCraftPicker showWithTitle:@"字体缩放" items:scales handler:^(NSInteger idx) {
+            CGFloat vals[] = {1.0, 0.95, 0.90, 0.85, 0.80, 0.75, 0.70};
+            [[NSUserDefaults standardUserDefaults] setFloat:vals[idx] forKey:kDPIScaleKey];
+            [[NSUserDefaults standardUserDefaults] synchronize];
+            [tv reloadRowsAtIndexPaths:@[ip] withRowAnimation:UITableViewRowAnimationNone];
+        }];
+    }
     if (ip.section == 0 && ip.row == 4) {
         [self.navigationController pushViewController:[[WxCraftKeywordVC alloc] init] animated:YES];
     }
@@ -432,7 +463,15 @@ static UIWindow *topWindow(void) {
         else if (ip.row == 1) { c.textLabel.text = @"日月开关"; c.detailTextLabel.text = @"UISwitch 日月动画样式"; c.accessoryView = self.daynightSwitch; }
         else if (ip.row == 2) { c.textLabel.text = @"游戏作弊"; c.detailTextLabel.text = @"骰子/猜拳可选点数"; c.accessoryView = self.gameCheatSwitch; }
         else if (ip.row == 3) { c.textLabel.text = @"去广告"; c.detailTextLabel.text = @"朋友圈 / 文章 / 小程序"; c.accessoryView = self.adBlockSwitch; }
-        else { c.textLabel.text = @"自动登录"; c.detailTextLabel.text = @"电脑登录自动确认"; c.accessoryView = self.autoLoginSwitch; }
+        else if (ip.row == 5) { c.textLabel.text = @"自动登录"; c.detailTextLabel.text = @"电脑登录自动确认"; c.accessoryView = self.autoLoginSwitch; }
+        else {
+            NSInteger pct = (NSInteger)(dpiScale() * 100);
+            c.textLabel.text = @"字体缩放";
+            c.detailTextLabel.text = [NSString stringWithFormat:@"%ld%%（重启生效）>", (long)pct];
+            c.accessoryView = nil;
+            c.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+            c.selectionStyle = UITableViewCellSelectionStyleDefault;
+        }
         return c;
     }
     // --- 插件收纳 ---
