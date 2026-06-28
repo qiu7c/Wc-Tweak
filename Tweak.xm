@@ -288,14 +288,126 @@ static UIWindow *topWindow(void) {
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.title = @"WxCraft";
-    self.view.backgroundColor = [UIColor whiteColor];
+    self.view.backgroundColor = [UIColor colorWithWhite:0.96 alpha:1];
     self.pluginFolded = YES;
 
-    UILabel *lbl = [[UILabel alloc] initWithFrame:CGRectMake(0, 100, self.view.bounds.size.width, 40)];
-    lbl.text = @"WxCraft 设置页";
-    lbl.textAlignment = NSTextAlignmentCenter;
-    lbl.font = [UIFont systemFontOfSize:20];
-    [self.view addSubview:lbl];
+    self.tableView = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleInsetGrouped];
+    self.tableView.delegate = self;
+    self.tableView.dataSource = self;
+    self.tableView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    [self.view addSubview:self.tableView];
+
+    self.duangSwitch    = [self makeSwitch:kDuangKey];
+    self.gameCheatSwitch = [self makeSwitch:kGameCheatKey];
+    self.adBlockSwitch   = [self makeSwitch:kAdBlockKey];
+    self.msgFilterSwitch  = [self makeSwitch:kMsgFilterKey];
+    self.autoLoginSwitch  = [self makeSwitch:kAutoLoginKey];
+    self.screenshotSwitch = [self makeSwitch:kScreenShotHide];
+    self.noSepSwitch      = [self makeSwitch:kNoSeparator];
+    self.hideDNDSwitch    = [self makeSwitch:kHideDNDIcon];
+    self.swipeInputSwitch  = [self makeSwitch:kSwipeInput];
+}
+
+- (UISwitch *)makeSwitch:(NSString *)key {
+    UISwitch *s = [[UISwitch alloc] init];
+    s.on = pref(key);
+    return s;
+}
+
+- (void)saveBool:(BOOL)v forKey:(NSString *)k {
+    [[NSUserDefaults standardUserDefaults] setBool:v forKey:k];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+}
+
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 3; }
+
+- (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)s {
+    if (s == 0) return 4;  // 聊天增强
+    if (s == 1) return 5;  // 界面
+    if (s == 2) return 1;  // 其他 (折叠)
+    return 0;
+}
+
+- (NSString *)tableView:(UITableView *)tv titleForHeaderInSection:(NSInteger)s {
+    if (s == 0) return @"聊天增强";
+    if (s == 1) return @"界面";
+    if (s == 2) return @"其他";
+    return nil;
+}
+
+- (void)tableView:(UITableView *)tv didSelectRowAtIndexPath:(NSIndexPath *)ip {
+    [tv deselectRowAtIndexPath:ip animated:YES];
+    if (ip.section == 0 && ip.row == 3) { // 圆角
+        [self.navigationController pushViewController:[[WxCraftRoundVC alloc] init] animated:YES];
+    }
+    if (ip.section == 2 && ip.row == 0) { // 插件收纳折叠
+        self.pluginFolded = !self.pluginFolded;
+        [tv reloadData];
+    }
+}
+
+- (UITableViewCell *)tableView:(UITableView *)tv cellForRowAtIndexPath:(NSIndexPath *)ip {
+    UITableViewCell *c = [tv dequeueReusableCellWithIdentifier:@"c"];
+    if (!c) {
+        c = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:@"c"];
+        c.textLabel.font = [UIFont systemFontOfSize:15];
+        c.detailTextLabel.font = [UIFont systemFontOfSize:12];
+        c.detailTextLabel.textColor = [UIColor secondaryLabelColor];
+    }
+    c.textLabel.text = @"";
+    c.detailTextLabel.text = @"";
+    c.accessoryView = nil;
+    c.accessoryType = UITableViewCellAccessoryNone;
+    c.selectionStyle = UITableViewCellSelectionStyleNone;
+
+    // ==== 聊天增强 ====
+    if (ip.section == 0) {
+        if (ip.row == 0) {
+            c.textLabel.text = @"小信号弹窗 (Duang)"; c.detailTextLabel.text = @"恢复召唤弹窗"; c.accessoryView = self.duangSwitch;
+            [self.duangSwitch addTarget:self action:@selector(toggleDuang:) forControlEvents:UIControlEventValueChanged];
+        } else if (ip.row == 1) {
+            c.textLabel.text = @"游戏作弊"; c.detailTextLabel.text = @"骰子/猜拳自由选择"; c.accessoryView = self.gameCheatSwitch;
+            [self.gameCheatSwitch addTarget:self action:@selector(toggleGameCheat:) forControlEvents:UIControlEventValueChanged];
+        } else if (ip.row == 2) {
+            c.textLabel.text = @"输入框手势"; c.detailTextLabel.text = @"左滑清除 · 右滑粘贴"; c.accessoryView = self.swipeInputSwitch;
+            [self.swipeInputSwitch addTarget:self action:@selector(toggleSwipeInput:) forControlEvents:UIControlEventValueChanged];
+        } else {
+            c.textLabel.text = @"圆角设置"; c.detailTextLabel.text = @"定制 UI 圆角";
+            c.accessoryType = UITableViewCellAccessoryDisclosureIndicator; c.selectionStyle = UITableViewCellSelectionStyleDefault;
+        }
+        return c;
+    }
+    // ==== 界面 ====
+    if (ip.section == 1) {
+        if (ip.row == 0) {
+            c.textLabel.text = @"去广告"; c.detailTextLabel.text = @"朋友圈/文章/小程序"; c.accessoryView = self.adBlockSwitch;
+            [self.adBlockSwitch addTarget:self action:@selector(toggleAdBlock:) forControlEvents:UIControlEventValueChanged];
+        } else if (ip.row == 1) {
+            c.textLabel.text = @"去除分割线"; c.detailTextLabel.text = @"全局隐藏列表分割线"; c.accessoryView = self.noSepSwitch;
+            [self.noSepSwitch addTarget:self action:@selector(toggleNoSep:) forControlEvents:UIControlEventValueChanged];
+        } else if (ip.row == 2) {
+            c.textLabel.text = @"免打扰图标"; c.detailTextLabel.text = @"隐藏聊天列表铃铛"; c.accessoryView = self.hideDNDSwitch;
+            [self.hideDNDSwitch addTarget:self action:@selector(toggleHideDND:) forControlEvents:UIControlEventValueChanged];
+        } else if (ip.row == 3) {
+            c.textLabel.text = @"截图转发按钮"; c.detailTextLabel.text = @"去除截图后的小按钮"; c.accessoryView = self.screenshotSwitch;
+            [self.screenshotSwitch addTarget:self action:@selector(toggleScreenShot:) forControlEvents:UIControlEventValueChanged];
+        } else {
+            c.textLabel.text = @"消息过滤";
+            NSInteger cnt = filterKeywords().count;
+            c.detailTextLabel.text = cnt ? [NSString stringWithFormat:@"%ld 个关键词", (long)cnt] : @"未设置";
+            c.accessoryView = self.msgFilterSwitch;
+            c.accessoryType = UITableViewCellAccessoryDisclosureIndicator; c.selectionStyle = UITableViewCellSelectionStyleDefault;
+            [self.msgFilterSwitch addTarget:self action:@selector(toggleMsgFilter:) forControlEvents:UIControlEventValueChanged];
+        }
+        return c;
+    }
+
+    // ==== 其他 ====
+    NSArray *all = allPlugins();
+    c.textLabel.text = self.pluginFolded ? [NSString stringWithFormat:@"插件收纳隐藏 (%lu 个)", (unsigned long)all.count] : @"插件收纳隐藏";
+    c.detailTextLabel.text = self.pluginFolded ? @"点击展开" : @"点击收起";
+    c.selectionStyle = UITableViewCellSelectionStyleDefault;
+    return c;
 }
 
 - (void)toggleDuang:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kDuangKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
