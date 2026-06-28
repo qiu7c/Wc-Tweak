@@ -1,0 +1,9 @@
+# Theos build
+/.theos/
+/packages/
+/obj/
+*.deb
+
+# macOS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,32 @@
+name: Build DEB
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Theos
+        run: |
+          export THEOS=/opt/theos
+          echo "THEOS=$THEOS" >> $GITHUB_ENV
+          git clone --depth 1 https://github.com/theos/theos.git $THEOS --quiet
+
+      - name: Build package
+        run: |
+          export THEOS=/opt/theos
+          make clean package FINALPACKAGE=1
+
+      - name: Upload DEB
+        uses: actions/upload-artifact@v4
+        with:
+          name: tweak.deb
+          path: packages/*.deb
+          retention-days: 30

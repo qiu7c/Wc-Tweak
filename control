@@ -1,0 +1,9 @@
+Package: com.cc.foreignappenhancer
+Name: ForeignAppEnhancer
+Version: 1.0.0
+Architecture: iphoneos-arm64
+Description: 增强国外 App 功能
+Maintainer: CC <js8887@126.com>
+Author: CC
+Section: Tweaks
+Depends: mobilesubstrate
