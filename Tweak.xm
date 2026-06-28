@@ -312,9 +312,50 @@ static UIWindow *topWindow(void) {
     self.view.backgroundColor = [UIColor whiteColor];
     self.pluginFolded = YES;
 
+    // 头像名片
+    UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, 90)];
+    header.backgroundColor = [UIColor whiteColor];
+    UIImageView *avatar = [[UIImageView alloc] initWithFrame:CGRectMake(20, 15, 60, 60)];
+    avatar.layer.cornerRadius = 30; avatar.clipsToBounds = YES;
+    avatar.backgroundColor = [UIColor systemGray5Color];
+    [header addSubview:avatar];
+
+    UILabel *nick = [[UILabel alloc] initWithFrame:CGRectMake(94, 22, 200, 24)];
+    nick.font = [UIFont systemFontOfSize:20 weight:UIFontWeightSemibold];
+    nick.text = @"WxCraft";
+    [header addSubview:nick];
+
+    UILabel *sub = [[UILabel alloc] initWithFrame:CGRectMake(94, 48, 200, 18)];
+    sub.font = [UIFont systemFontOfSize:13];
+    sub.textColor = [UIColor secondaryLabelColor];
+    sub.text = @"微信增强工具";
+    [header addSubview:sub];
+
+    // 加载头像
+    dispatch_async(dispatch_get_main_queue(), ^{
+        id svc = [objc_getClass("MMServiceCenter") defaultCenter];
+        id cm = ((id(*)(id,SEL,Class))objc_msgSend)(svc, @selector(getService:), objc_getClass("CContactMgr"));
+        id selfContact = ((id(*)(id,SEL))objc_msgSend)(cm, @selector(getSelfContact));
+        if (selfContact) {
+            NSString *name = ((NSString*(*)(id,SEL))objc_msgSend)(selfContact, @selector(m_nsNickName));
+            if (name.length) nick.text = name;
+            NSString *wxid = ((NSString*(*)(id,SEL))objc_msgSend)(selfContact, @selector(m_nsUsrName));
+            if (wxid.length) sub.text = wxid;
+
+            // 尝试获取头像
+            NSString *headUrl = ((NSString*(*)(id,SEL))objc_msgSend)(selfContact, @selector(m_nsHeadImgUrl));
+            if (headUrl.length) {
+                NSString *localPath = [NSHomeDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"Library/Caches/headimg/%@", [headUrl lastPathComponent]]];
+                UIImage *img = [UIImage imageWithContentsOfFile:localPath];
+                if (img) avatar.image = img;
+            }
+        }
+    });
+
     self.tv = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleInsetGrouped];
     self.tv.delegate = self; self.tv.dataSource = self;
     self.tv.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    self.tv.tableHeaderView = header;
     [self.view addSubview:self.tv];
 }
 
