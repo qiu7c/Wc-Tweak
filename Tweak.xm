@@ -1,18 +1,16 @@
 // WxCraft
 // 作者: CC
-// 微信增强: 小信号弹窗 + 日月开关 + 游戏作弊 + 插件收纳管理
+// 微信增强: 小信号弹窗 + 游戏作弊 + 插件收纳管理
 
 #import <UIKit/UIKit.h>
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
 #import <objc/message.h>
-#import "DayNightSwitch.h"
 
 // ============================================================
 // 常量
 // ============================================================
 static NSString * const kDuangKey       = @"WxCraft_Duang";
-static NSString * const kDayNightKey    = @"WxCraft_DayNight";
 static NSString * const kGameCheatKey   = @"WxCraft_GameCheat";
 static NSString * const kPluginBlockKey = @"WxCraft_PluginBlock";
 static NSString * const kPluginAllKey   = @"WxCraft_AllPlugins";
@@ -281,7 +279,7 @@ static UIWindow *topWindow(void) {
 
 @interface WxCraftSettingsVC : UIViewController <UITableViewDelegate, UITableViewDataSource>
 @property (nonatomic, strong) UITableView *tableView;
-@property (nonatomic, strong) UISwitch *duangSwitch, *daynightSwitch, *gameCheatSwitch, *adBlockSwitch, *msgFilterSwitch, *autoLoginSwitch, *screenshotSwitch, *noSepSwitch, *hideDNDSwitch, *swipeInputSwitch;
+@property (nonatomic, strong) UISwitch *duangSwitch, *gameCheatSwitch, *adBlockSwitch, *msgFilterSwitch, *autoLoginSwitch, *screenshotSwitch, *noSepSwitch, *hideDNDSwitch, *swipeInputSwitch;
 @property (nonatomic) BOOL pluginFolded;
 @property (nonatomic) NSInteger versionTapCount;
 @end
@@ -303,8 +301,6 @@ static UIWindow *topWindow(void) {
 
     self.duangSwitch = [[UISwitch alloc] init]; self.duangSwitch.on = pref(kDuangKey);
     [self.duangSwitch addTarget:self action:@selector(toggleDuang:) forControlEvents:UIControlEventValueChanged];
-    self.daynightSwitch = [[UISwitch alloc] init]; self.daynightSwitch.on = pref(kDayNightKey);
-    [self.daynightSwitch addTarget:self action:@selector(toggleDayNight:) forControlEvents:UIControlEventValueChanged];
     self.gameCheatSwitch = [[UISwitch alloc] init]; self.gameCheatSwitch.on = pref(kGameCheatKey);
     [self.gameCheatSwitch addTarget:self action:@selector(toggleGameCheat:) forControlEvents:UIControlEventValueChanged];
     self.adBlockSwitch = [[UISwitch alloc] init]; self.adBlockSwitch.on = pref(kAdBlockKey);
@@ -324,7 +320,6 @@ static UIWindow *topWindow(void) {
 }
 
 - (void)toggleDuang:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kDuangKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
-- (void)toggleDayNight:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kDayNightKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 - (void)toggleGameCheat:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kGameCheatKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 - (void)toggleAdBlock:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kAdBlockKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 - (void)toggleMsgFilter:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kMsgFilterKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
@@ -349,7 +344,7 @@ static UIWindow *topWindow(void) {
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 3; }
 
 - (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)s {
-    if (s == 0) return 11;
+    if (s == 0) return 10;
     if (s == 1) return self.pluginFolded ? 1 : (allPlugins().count ? allPlugins().count + 1 : 2);
     return 3;
 }
@@ -457,9 +452,8 @@ static UIWindow *topWindow(void) {
             c.detailTextLabel.textColor = [UIColor grayColor];
         }
         if (ip.row == 0) { c.textLabel.text = @"小信号弹窗 (Duang)"; c.detailTextLabel.text = @"恢复微信 8.0.31+ 召唤弹窗"; c.accessoryView = self.duangSwitch; }
-        else if (ip.row == 1) { c.textLabel.text = @"日月开关"; c.detailTextLabel.text = @"UISwitch 日月动画样式"; c.accessoryView = self.daynightSwitch; }
-        else if (ip.row == 2) { c.textLabel.text = @"游戏作弊"; c.detailTextLabel.text = @"骰子/猜拳可选点数"; c.accessoryView = self.gameCheatSwitch; }
-        else if (ip.row == 3) { c.textLabel.text = @"去广告"; c.detailTextLabel.text = @"朋友圈 / 文章 / 小程序"; c.accessoryView = self.adBlockSwitch; }
+        else if (ip.row == 1) { c.textLabel.text = @"游戏作弊"; c.detailTextLabel.text = @"骰子/猜拳可选点数"; c.accessoryView = self.gameCheatSwitch; }
+        else if (ip.row == 2) { c.textLabel.text = @"去广告"; c.detailTextLabel.text = @"朋友圈 / 文章 / 小程序"; c.accessoryView = self.adBlockSwitch; }
         else if (ip.row == 5) { c.textLabel.text = @"自动登录"; c.detailTextLabel.text = @"电脑登录自动确认"; c.accessoryView = self.autoLoginSwitch; }
         else if (ip.row == 6) { c.textLabel.text = @"截图转发按钮"; c.detailTextLabel.text = @"去除截图后的小按钮"; c.accessoryView = self.screenshotSwitch; }
         else if (ip.row == 7) {
@@ -577,23 +571,6 @@ static UIWindow *topWindow(void) {
         CMessageWrap *h = msg;
         dispatch_async(dispatch_get_main_queue(), ^{ [self displaySignalMessageWithDelay:h]; });
     }
-}
-%end
-
-// ============================================================
-// 日月开关 (DayNightSwitch)
-// ============================================================
-
-%hook UISwitch
-- (void)didMoveToSuperview {
-    %orig;
-    if (!pref(kDayNightKey)) return;
-    DayNightSwitch *ds = [[DayNightSwitch alloc] initWithFrame:CGRectMake(0, 0, self.frame.size.width, self.frame.size.height)];
-    ds.on = self.on;
-    ds.changeAction = ^(BOOL on) { self.on = on; [self sendActionsForControlEvents:UIControlEventValueChanged]; };
-    self.layer.opacity = 0;
-    self.layer.shadowOpacity = 0;
-    [self addSubview:ds];
 }
 %end
 

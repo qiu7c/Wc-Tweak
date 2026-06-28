@@ -14,7 +14,7 @@ include $(THEOS)/makefiles/common.mk
 TWEAK_NAME = WxCraft
 
 # 源文件
-WxCraft_FILES = Tweak.xm DayNightSwitch.m
+WxCraft_FILES = Tweak.xm
 WxCraft_CFLAGS = -fobjc-arc
 WxCraft_FRAMEWORKS = UIKit Foundation QuartzCore
 
