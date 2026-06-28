@@ -364,9 +364,6 @@ static UIWindow *topWindow(void) {
 // 游戏作弊
 // ============================================================
 
-@interface GameController : NSObject
-+ (NSString *)getMD5ByGameContent:(int)content;
-@end
 @interface CMessageMgr : NSObject
 - (void)AddEmoticonMsg:(NSString *)msg MsgWrap:(CMessageWrap *)msgWrap;
 @end
@@ -386,7 +383,9 @@ static UIWindow *topWindow(void) {
                                   items: items
                                 handler:^(NSInteger idx) {
                 int val = (int)idx + 1;
-                [msgWrap setM_nsEmoticonMD5:[GameController getMD5ByGameContent:val]];
+                id gc = objc_getClass("GameController");
+                NSString *md5 = ((NSString *(*)(id, SEL, int))objc_msgSend)(gc, @selector(getMD5ByGameContent:), val);
+                [msgWrap setM_nsEmoticonMD5:md5];
                 [msgWrap setM_uiGameContent:val];
                 %orig(msg, msgWrap);
             }];
