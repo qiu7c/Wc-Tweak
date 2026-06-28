@@ -796,7 +796,7 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
     return @{
         @"MMGrowTextView":          @"聊天输入框",
         @"InputToolContainerView":  @"输入工具容器",
-        @"WCSearchBar":             @"搜索框",
+        @"SearchStackView":         @"搜索框",
     };
 }
 
@@ -808,6 +808,15 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
     // 全局分割线隐藏
     if (pref(kNoSeparator) && ![self isKindOfClass:[UITableViewCell class]] && isSeparatorView(self)) {
         self.hidden = YES;
+        return;
+    }
+
+    // 搜索框特殊处理 (UIStackView inside WCSearchBar)
+    if ([roundEnabledClasses() containsObject:@"SearchStackView"] &&
+        [self isKindOfClass:[UIStackView class]] &&
+        [NSStringFromClass(self.superview.class) isEqualToString:@"WCSearchBar"]) {
+        self.layer.cornerRadius = roundRadius(@"SearchStackView");
+        self.clipsToBounds = YES;
         return;
     }
 
