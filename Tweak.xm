@@ -11,19 +11,33 @@
 // ============================================================
 // 开关 Key
 // ============================================================
-static NSString * const kDuangKey     = @"WcPlus_Duang";
-static NSString * const kDayNightKey  = @"WcPlus_DayNight";
-static NSString * const kGameCheatKey = @"WcPlus_GameCheat";
+static NSString * const kDuangKey      = @"WcPlus_Duang";
+static NSString * const kDayNightKey   = @"WcPlus_DayNight";
+static NSString * const kGameCheatKey  = @"WcPlus_GameCheat";
 static NSString * const kPluginBlockKey = @"WcPlus_PluginBlock";
+static NSString * const kPluginAllKey   = @"WcPlus_AllPlugins";
 
-// 获取被屏蔽插件列表
+// 被屏蔽列表
 static NSArray<NSString *> *blockedPlugins(void) {
     NSString *raw = [[NSUserDefaults standardUserDefaults] stringForKey:kPluginBlockKey];
-    if (!raw.length) return @[];
-    return [raw componentsSeparatedByString:@","];
+    return raw.length ? [raw componentsSeparatedByString:@","] : @[];
 }
 
-// 检查是否被屏蔽
+// 所有已发现的插件
+static NSArray<NSString *> *allPlugins(void) {
+    NSString *raw = [[NSUserDefaults standardUserDefaults] stringForKey:kPluginAllKey];
+    return raw.length ? [raw componentsSeparatedByString:@","] : @[];
+}
+
+static void addToAllPlugins(NSString *title) {
+    NSMutableArray *arr = [allPlugins() mutableCopy];
+    if (![arr containsObject:title]) {
+        [arr addObject:title];
+        [[NSUserDefaults standardUserDefaults] setObject:[arr componentsJoinedByString:@","] forKey:kPluginAllKey];
+        [[NSUserDefaults standardUserDefaults] synchronize];
+    }
+}
+
 static BOOL isPluginBlocked(NSString *title) {
     for (NSString *name in blockedPlugins()) {
         if ([title containsString:name] || [name isEqualToString:title]) return YES;
@@ -77,48 +91,30 @@ static BOOL pref(NSString *key) {
 - (void)toggleDayNight:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kDayNightKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 - (void)toggleGameCheat:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kGameCheatKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 
+- (void)togglePlugin:(UISwitch *)s {
+    NSArray *all = allPlugins();
+    NSInteger idx = s.tag;
+    if (idx >= all.count) return;
+    NSString *title = all[idx];
+    NSMutableArray *blk = [blockedPlugins() mutableCopy];
+    if (s.isOn) {
+        [blk removeObject:title];
+    } else {
+        if (![blk containsObject:title]) [blk addObject:title];
+    }
+    [[NSUserDefaults standardUserDefaults] setObject:[blk componentsJoinedByString:@","] forKey:kPluginBlockKey];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+}
+
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 3; }
 - (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)s {
-    return s == 0 ? 3 : (s == 1 ? (blockedPlugins().count ?: 1) : 1);
+    return s == 0 ? 3 : (s == 1 ? (allPlugins().count ?: 1) : 1);
 }
 
 - (CGFloat)tableView:(UITableView *)tv heightForHeaderInSection:(NSInteger)s { return 36; }
 
 - (void)tableView:(UITableView *)tv didSelectRowAtIndexPath:(NSIndexPath *)ip {
     [tv deselectRowAtIndexPath:ip animated:YES];
-    if (ip.section != 1) return;
-    NSArray *list = blockedPlugins();
-    if (ip.row != list.count) return; // only the "+" row
-
-    UIAlertController *ac = [UIAlertController alertControllerWithTitle:@"添加屏蔽插件" message:@"输入要屏蔽的插件名称（支持模糊匹配）" preferredStyle:UIAlertControllerStyleAlert];
-    [ac addTextFieldWithConfigurationHandler:^(UITextField *tf) { tf.placeholder = @"插件名称"; }];
-    [ac addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
-    [ac addAction:[UIAlertAction actionWithTitle:@"屏蔽" style:UIAlertActionStyleDestructive handler:^(UIAlertAction *_) {
-        NSString *name = ac.textFields.firstObject.text;
-        if (!name.length) return;
-        NSMutableArray *arr = [list mutableCopy];
-        [arr addObject:name];
-        NSString *joined = [arr componentsJoinedByString:@","];
-        [[NSUserDefaults standardUserDefaults] setObject:joined forKey:kPluginBlockKey];
-        [[NSUserDefaults standardUserDefaults] synchronize];
-        [tv reloadSections:[NSIndexSet indexSetWithIndex:1] withRowAnimation:UITableViewRowAnimationAutomatic];
-    }]];
-    [self presentViewController:ac animated:YES completion:nil];
-}
-
-- (BOOL)tableView:(UITableView *)tv canEditRowAtIndexPath:(NSIndexPath *)ip {
-    if (ip.section != 1) return NO;
-    NSArray *list = blockedPlugins();
-    return list.count > 0 && ip.row < list.count;
-}
-
-- (void)tableView:(UITableView *)tv commitEditingStyle:(UITableViewCellEditingStyle)style forRowAtIndexPath:(NSIndexPath *)ip {
-    if (style != UITableViewCellEditingStyleDelete) return;
-    NSMutableArray *arr = [blockedPlugins() mutableCopy];
-    [arr removeObjectAtIndex:ip.row];
-    [[NSUserDefaults standardUserDefaults] setObject:[arr componentsJoinedByString:@","] forKey:kPluginBlockKey];
-    [[NSUserDefaults standardUserDefaults] synchronize];
-    [tv reloadSections:[NSIndexSet indexSetWithIndex:1] withRowAnimation:UITableViewRowAnimationAutomatic];
 }
 
 - (UIView *)tableView:(UITableView *)tv viewForHeaderInSection:(NSInteger)s {
@@ -158,29 +154,24 @@ static BOOL pref(NSString *key) {
     }
 
     if (ip.section == 1) {
-        NSArray *list = blockedPlugins();
+        NSArray *all = allPlugins();
         UITableViewCell *cell = [tv dequeueReusableCellWithIdentifier:@"blk"];
         if (!cell) {
-            cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:@"blk"];
+            cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:@"blk"];
+            cell.selectionStyle = UITableViewCellSelectionStyleNone;
             cell.textLabel.font = [UIFont systemFontOfSize:14];
-            cell.detailTextLabel.font = [UIFont systemFontOfSize:11];
-            cell.detailTextLabel.textColor = [UIColor grayColor];
         }
-        if (list.count == 0) {
-            cell.textLabel.text = @"暂无屏蔽插件";
-            cell.detailTextLabel.text = @"被屏蔽的插件不会显示在收纳页";
-            cell.selectionStyle = UITableViewCellSelectionStyleNone;
-            cell.accessoryType = UITableViewCellAccessoryNone;
-        } else if (ip.row == list.count) {
-            cell.textLabel.text = @"＋ 添加屏蔽";
-            cell.detailTextLabel.text = @"";
-            cell.selectionStyle = UITableViewCellSelectionStyleDefault;
-            cell.accessoryType = UITableViewCellAccessoryNone;
+        if (all.count == 0) {
+            cell.textLabel.text = @"暂无已注册插件";
+            cell.accessoryView = nil;
         } else {
-            cell.textLabel.text = list[ip.row];
-            cell.detailTextLabel.text = @"左滑删除";
-            cell.selectionStyle = UITableViewCellSelectionStyleNone;
-            cell.accessoryType = UITableViewCellAccessoryNone;
+            NSString *title = all[ip.row];
+            cell.textLabel.text = title;
+            UISwitch *sw = [[UISwitch alloc] init];
+            sw.on = !isPluginBlocked(title);
+            sw.tag = ip.row;
+            [sw addTarget:self action:@selector(togglePlugin:) forControlEvents:UIControlEventValueChanged];
+            cell.accessoryView = sw;
         }
         return cell;
     }
@@ -323,10 +314,12 @@ static BOOL pref(NSString *key) {
 
 %hook WCPluginsMgr
 - (void)registerControllerWithTitle:(NSString *)title version:(NSString *)version controller:(NSString *)controller {
+    addToAllPlugins(title);
     if (!isPluginBlocked(title)) %orig;
 }
 
 - (void)registerSwitchWithTitle:(NSString *)title key:(NSString *)key {
+    addToAllPlugins(title);
     if (!isPluginBlocked(title)) %orig;
 }
 %end
