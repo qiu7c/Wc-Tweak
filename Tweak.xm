@@ -24,6 +24,7 @@ static NSString * const kScreenShotHide = @"WxCraft_ScreenShotHide";
 static NSString * const kRoundCorners  = @"WxCraft_RoundCorners";
 static NSString * const kRoundRadiusPrefix = @"WxCraft_Round_";
 static NSString * const kNoSeparator  = @"WxCraft_NoSeparator";
+static NSString * const kHideDNDIcon  = @"WxCraft_HideDNDIcon";
 
 static NSArray<NSString *> *blockedPlugins(void) {
     NSString *raw = [[NSUserDefaults standardUserDefaults] stringForKey:kPluginBlockKey];
@@ -278,7 +279,7 @@ static UIWindow *topWindow(void) {
 
 @interface WxCraftSettingsVC : UIViewController <UITableViewDelegate, UITableViewDataSource>
 @property (nonatomic, strong) UITableView *tableView;
-@property (nonatomic, strong) UISwitch *duangSwitch, *daynightSwitch, *gameCheatSwitch, *adBlockSwitch, *msgFilterSwitch, *autoLoginSwitch, *screenshotSwitch, *noSepSwitch;
+@property (nonatomic, strong) UISwitch *duangSwitch, *daynightSwitch, *gameCheatSwitch, *adBlockSwitch, *msgFilterSwitch, *autoLoginSwitch, *screenshotSwitch, *noSepSwitch, *hideDNDSwitch;
 @property (nonatomic) BOOL pluginFolded;
 @property (nonatomic) NSInteger versionTapCount;
 @end
@@ -314,6 +315,8 @@ static UIWindow *topWindow(void) {
     [self.screenshotSwitch addTarget:self action:@selector(toggleScreenShot:) forControlEvents:UIControlEventValueChanged];
     self.noSepSwitch = [[UISwitch alloc] init]; self.noSepSwitch.on = pref(kNoSeparator);
     [self.noSepSwitch addTarget:self action:@selector(toggleNoSep:) forControlEvents:UIControlEventValueChanged];
+    self.hideDNDSwitch = [[UISwitch alloc] init]; self.hideDNDSwitch.on = pref(kHideDNDIcon);
+    [self.hideDNDSwitch addTarget:self action:@selector(toggleHideDND:) forControlEvents:UIControlEventValueChanged];
 }
 
 - (void)toggleDuang:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kDuangKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
@@ -324,6 +327,7 @@ static UIWindow *topWindow(void) {
 - (void)toggleAutoLogin:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kAutoLoginKey]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 - (void)toggleScreenShot:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kScreenShotHide]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 - (void)toggleNoSep:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kNoSeparator]; [[NSUserDefaults standardUserDefaults] synchronize]; }
+- (void)toggleHideDND:(UISwitch *)s { [[NSUserDefaults standardUserDefaults] setBool:s.isOn forKey:kHideDNDIcon]; [[NSUserDefaults standardUserDefaults] synchronize]; }
 
 - (void)togglePlugin:(UISwitch *)s {
     NSArray *all = allPlugins();
@@ -340,7 +344,7 @@ static UIWindow *topWindow(void) {
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 3; }
 
 - (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)s {
-    if (s == 0) return 9;
+    if (s == 0) return 10;
     if (s == 1) return self.pluginFolded ? 1 : (allPlugins().count ? allPlugins().count + 1 : 2);
     return 3;
 }
@@ -462,7 +466,8 @@ static UIWindow *topWindow(void) {
             c.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
             c.selectionStyle = UITableViewCellSelectionStyleDefault;
         }
-        else { c.textLabel.text = @"去除分割线"; c.detailTextLabel.text = @"全局隐藏列表分割线"; c.accessoryView = self.noSepSwitch; }
+        else if (ip.row == 8) { c.textLabel.text = @"去除分割线"; c.detailTextLabel.text = @"全局隐藏列表分割线"; c.accessoryView = self.noSepSwitch; }
+        else { c.textLabel.text = @"免打扰图标"; c.detailTextLabel.text = @"隐藏聊天列表的铃铛图标"; c.accessoryView = self.hideDNDSwitch; }
         return c;
     }
     // --- 插件收纳 ---
@@ -900,6 +905,25 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
     [[NSUserDefaults standardUserDefaults] synchronize];
 }
 @end
+
+// ============================================================
+// 隐藏免打扰图标
+// ============================================================
+
+%hook UIImageView
+- (void)didMoveToSuperview {
+    %orig;
+    if (!pref(kHideDNDIcon) || !self.superview) return;
+    CGFloat w = self.frame.size.width, h = self.frame.size.height;
+    // 免打扰图标特征: 13×13 左右，在聊天列表 Cell 中
+    if (w > 8 && w <= 16 && h > 8 && h <= 16 && self.frame.origin.x > 30) {
+        // 检查是否在聊天列表页
+        UIResponder *r = self.superview;
+        while (r && ![NSStringFromClass(r.class) containsString:@"Session"]) r = r.nextResponder;
+        if (r) { self.hidden = YES; return; }
+    }
+}
+%end
 
 // ============================================================
 // 全局去除分割线
