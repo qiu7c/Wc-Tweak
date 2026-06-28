@@ -801,22 +801,15 @@ static BOOL findAndHideLabel(UIView *root, NSArray<NSString *> *names) {
 }
 
 %hook MMTableViewCell
-- (void)layoutSubviews {
+- (void)setFrame:(CGRect)frame {
     NSArray *names = hiddenCards();
     if (names.count && findAndHideLabel(self, names)) {
+        %orig(CGRectMake(frame.origin.x, frame.origin.y, frame.size.width, 0));
         self.hidden = YES;
         self.alpha = 0;
         return;
     }
     %orig;
-}
-
-- (CGSize)sizeThatFits:(CGSize)size {
-    NSArray *names = hiddenCards();
-    if (names.count && findAndHideLabel(self, names)) {
-        return CGSizeZero;
-    }
-    return %orig;
 }
 %end
 
