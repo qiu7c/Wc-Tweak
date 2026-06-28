@@ -973,6 +973,10 @@ static BOOL isSeparatorView(UIView *v) {
 // ============================================================
 
 %ctor {
+    // 每次启动清空已发现插件缓存，让列表只显示当前注入的插件
+    [[NSUserDefaults standardUserDefaults] removeObjectForKey:kPluginAllKey];
+    [[NSUserDefaults standardUserDefaults] synchronize];
+
     Class mgr = NSClassFromString(@"WCPluginsMgr");
     if (mgr) {
         id inst = ((id (*)(id, SEL))objc_msgSend)(mgr, @selector(sharedInstance));
