@@ -377,8 +377,11 @@ static UIWindow *topWindow(void) {
 
 - (void)tableView:(UITableView *)tv didSelectRowAtIndexPath:(NSIndexPath *)ip {
     [tv deselectRowAtIndexPath:ip animated:YES];
-    if (ip.section == 0 && ip.row == 7) {
+    if (ip.section == 0 && ip.row == 3) {
         [self.navigationController pushViewController:[[WxCraftKeywordVC alloc] init] animated:YES];
+    }
+    if (ip.section == 0 && ip.row == 6) {
+        [self.navigationController pushViewController:[[WxCraftRoundVC alloc] init] animated:YES];
     }
     if (ip.section == 1 && ip.row == 0) {
         self.pluginFolded = !self.pluginFolded;
@@ -454,16 +457,26 @@ static UIWindow *topWindow(void) {
         if (ip.row == 0) { c.textLabel.text = @"小信号弹窗 (Duang)"; c.detailTextLabel.text = @"恢复微信 8.0.31+ 召唤弹窗"; c.accessoryView = self.duangSwitch; }
         else if (ip.row == 1) { c.textLabel.text = @"游戏作弊"; c.detailTextLabel.text = @"骰子/猜拳可选点数"; c.accessoryView = self.gameCheatSwitch; }
         else if (ip.row == 2) { c.textLabel.text = @"去广告"; c.detailTextLabel.text = @"朋友圈 / 文章 / 小程序"; c.accessoryView = self.adBlockSwitch; }
-        else if (ip.row == 5) { c.textLabel.text = @"自动登录"; c.detailTextLabel.text = @"电脑登录自动确认"; c.accessoryView = self.autoLoginSwitch; }
-        else if (ip.row == 6) { c.textLabel.text = @"截图转发按钮"; c.detailTextLabel.text = @"去除截图后的小按钮"; c.accessoryView = self.screenshotSwitch; }
-        else if (ip.row == 7) {
+        else if (ip.row == 3) {
+            c.textLabel.text = @"消息过滤";
+            c.textLabel.font = [UIFont systemFontOfSize:16];
+            c.detailTextLabel.font = [UIFont systemFontOfSize:11];
+            NSInteger cnt = filterKeywords().count;
+            c.detailTextLabel.text = cnt ? [NSString stringWithFormat:@"%ld 个关键词 >", (long)cnt] : @"未设置关键词 >";
+            c.detailTextLabel.textColor = [UIColor grayColor];
+            c.accessoryView = self.msgFilterSwitch;
+            c.selectionStyle = UITableViewCellSelectionStyleDefault;
+        }
+        else if (ip.row == 4) { c.textLabel.text = @"自动登录"; c.detailTextLabel.text = @"电脑登录自动确认"; c.accessoryView = self.autoLoginSwitch; }
+        else if (ip.row == 5) { c.textLabel.text = @"截图转发按钮"; c.detailTextLabel.text = @"去除截图后的小按钮"; c.accessoryView = self.screenshotSwitch; }
+        else if (ip.row == 6) {
             c.textLabel.text = @"圆角设置";
             c.detailTextLabel.text = @"自定义 UI 圆角 >";
             c.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
             c.selectionStyle = UITableViewCellSelectionStyleDefault;
         }
-        else if (ip.row == 8) { c.textLabel.text = @"去除分割线"; c.detailTextLabel.text = @"全局隐藏列表分割线"; c.accessoryView = self.noSepSwitch; }
-        else if (ip.row == 9) { c.textLabel.text = @"免打扰图标"; c.detailTextLabel.text = @"隐藏聊天列表的铃铛图标"; c.accessoryView = self.hideDNDSwitch; }
+        else if (ip.row == 7) { c.textLabel.text = @"去除分割线"; c.detailTextLabel.text = @"全局隐藏列表分割线"; c.accessoryView = self.noSepSwitch; }
+        else if (ip.row == 8) { c.textLabel.text = @"免打扰图标"; c.detailTextLabel.text = @"隐藏聊天列表的铃铛图标"; c.accessoryView = self.hideDNDSwitch; }
         else { c.textLabel.text = @"输入框手势"; c.detailTextLabel.text = @"左滑清除 · 右滑粘贴"; c.accessoryView = self.swipeInputSwitch; }
         return c;
     }
