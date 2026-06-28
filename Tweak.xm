@@ -371,7 +371,7 @@ static UIWindow *topWindow(void) {
                 if (on) [h removeObject:name]; else [h addObject:name];
                 [[NSUserDefaults standardUserDefaults] setObject:[h componentsJoinedByString:@","] forKey:kHideCardsKey];
                 [[NSUserDefaults standardUserDefaults] synchronize];
-                [tv reloadData];
+                dispatch_async(dispatch_get_main_queue(), ^{ [tv reloadData]; });
             }]];
         }
         [ac addAction:[UIAlertAction actionWithTitle:@"取消" style:UIAlertActionStyleCancel handler:nil]];
@@ -787,11 +787,13 @@ static NSArray<NSString *> *hiddenCards(void) {
 %hook WCTableViewSectionManager
 - (void)addCell:(id)cell {
     NSArray *n = hiddenCards();
-    if (n.count) {
-        NSString *t = [cell valueForKey:@"title"] ?: @"";
-        for (NSString *name in n) {
-            if ([t isEqualToString:name]) return;
-        }
+    if (n.count && [cell respondsToSelector:@selector(title)]) {
+        @try {
+            NSString *t = [cell valueForKey:@"title"] ?: @"";
+            for (NSString *name in n) {
+                if ([t isEqualToString:name]) return;
+            }
+        } @catch (NSException *e) {}
     }
     %orig;
 }
