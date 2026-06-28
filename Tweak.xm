@@ -309,46 +309,43 @@ static UIWindow *topWindow(void) {
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.title = @"WxCraft";
-    self.view.backgroundColor = [UIColor whiteColor];
+    self.view.backgroundColor = [UIColor systemGroupedBackgroundColor];
     self.pluginFolded = YES;
 
-    // 头像名片
-    UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, 90)];
-    header.backgroundColor = [UIColor whiteColor];
-    UIImageView *avatar = [[UIImageView alloc] initWithFrame:CGRectMake(20, 15, 60, 60)];
-    avatar.layer.cornerRadius = 30; avatar.clipsToBounds = YES;
-    avatar.backgroundColor = [UIColor systemGray5Color];
-    [header addSubview:avatar];
+    // 头像名片卡片
+    CGFloat pw = self.view.bounds.size.width - 32;
+    UIView *card = [[UIView alloc] initWithFrame:CGRectMake(16, 16, pw, 86)];
+    card.backgroundColor = [UIColor whiteColor];
+    card.layer.cornerRadius = 14;
 
-    UILabel *nick = [[UILabel alloc] initWithFrame:CGRectMake(94, 22, 200, 24)];
-    nick.font = [UIFont systemFontOfSize:20 weight:UIFontWeightSemibold];
-    nick.text = @"WxCraft";
-    [header addSubview:nick];
+    UIImageView *av = [[UIImageView alloc] initWithFrame:CGRectMake(16, 13, 60, 60)];
+    av.layer.cornerRadius = 30; av.clipsToBounds = YES;
+    av.backgroundColor = [UIColor systemGray4Color];
+    av.image = [UIImage systemImageNamed:@"person.crop.circle.fill"];
+    av.tintColor = [UIColor systemGray2Color];
+    [card addSubview:av];
 
-    UILabel *sub = [[UILabel alloc] initWithFrame:CGRectMake(94, 48, 200, 18)];
-    sub.font = [UIFont systemFontOfSize:13];
-    sub.textColor = [UIColor secondaryLabelColor];
-    sub.text = @"微信增强工具";
-    [header addSubview:sub];
+    UILabel *nk = [[UILabel alloc] initWithFrame:CGRectMake(90, 18, pw - 106, 24)];
+    nk.font = [UIFont systemFontOfSize:18 weight:UIFontWeightSemibold]; nk.text = @"WxCraft";
+    [card addSubview:nk];
 
-    // 加载头像
+    UILabel *sb = [[UILabel alloc] initWithFrame:CGRectMake(90, 44, pw - 106, 20)];
+    sb.font = [UIFont systemFontOfSize:13]; sb.textColor = [UIColor secondaryLabelColor]; sb.text = @"微信增强工具";
+    [card addSubview:sb];
+
+    UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, 110)];
+    [header addSubview:card];
+
+    // 加载个人信息
     dispatch_async(dispatch_get_main_queue(), ^{
         id svc = [objc_getClass("MMServiceCenter") defaultCenter];
         id cm = ((id(*)(id,SEL,Class))objc_msgSend)(svc, @selector(getService:), objc_getClass("CContactMgr"));
-        id selfContact = ((id(*)(id,SEL))objc_msgSend)(cm, @selector(getSelfContact));
-        if (selfContact) {
-            NSString *name = ((NSString*(*)(id,SEL))objc_msgSend)(selfContact, @selector(m_nsNickName));
-            if (name.length) nick.text = name;
-            NSString *wxid = ((NSString*(*)(id,SEL))objc_msgSend)(selfContact, @selector(m_nsUsrName));
-            if (wxid.length) sub.text = wxid;
-
-            // 尝试获取头像
-            NSString *headUrl = ((NSString*(*)(id,SEL))objc_msgSend)(selfContact, @selector(m_nsHeadImgUrl));
-            if (headUrl.length) {
-                NSString *localPath = [NSHomeDirectory() stringByAppendingPathComponent:[NSString stringWithFormat:@"Library/Caches/headimg/%@", [headUrl lastPathComponent]]];
-                UIImage *img = [UIImage imageWithContentsOfFile:localPath];
-                if (img) avatar.image = img;
-            }
+        id sc = ((id(*)(id,SEL))objc_msgSend)(cm, @selector(getSelfContact));
+        if (sc) {
+            NSString *name = ((NSString*(*)(id,SEL))objc_msgSend)(sc, @selector(m_nsNickName));
+            if (name.length) nk.text = name;
+            NSString *wxid = ((NSString*(*)(id,SEL))objc_msgSend)(sc, @selector(m_nsUsrName));
+            if (wxid.length) sb.text = wxid;
         }
     });
 
