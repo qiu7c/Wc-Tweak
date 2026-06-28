@@ -49,6 +49,7 @@ static BOOL pref(NSString *key) {
 }
 
 static NSArray<NSString *> *filterKeywords(void);
+static NSArray<NSString *> *hiddenCards(void);
 
 static UIWindow *topWindow(void) {
     for (UIWindowScene *sc in [UIApplication sharedApplication].connectedScenes)
@@ -782,6 +783,9 @@ static NSArray<NSString *> *hiddenCards(void) {
     NSString *raw = [[NSUserDefaults standardUserDefaults] stringForKey:kHideCardsKey];
     return raw.length ? [raw componentsSeparatedByString:@","] : @[];
 }
+
+@interface MMTableViewCell : UITableViewCell
+@end
 
 %hook MMTableViewCell
 - (void)didMoveToSuperview {
