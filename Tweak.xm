@@ -807,6 +807,9 @@ static BOOL shouldFilterMsg(CMessageWrap *wrap) {
 
 @interface MMGrowTextView : UITextView
 @property (nonatomic, copy) NSString *text;
+- (void)wxc_updatePlaceholder;
+- (void)wxc_clearText;
+- (void)wxc_pasteText;
 @end
 
 %hook MMGrowTextView
