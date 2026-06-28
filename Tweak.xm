@@ -791,6 +791,7 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
     return @{
         @"MMGrowTextView":          @"聊天输入框",
         @"InputToolContainerView":  @"输入工具容器",
+        @"WCSearchBar":             @"搜索框",
     };
 }
 
