@@ -302,6 +302,8 @@ static UIWindow *topWindow(void) {
 @property (nonatomic, strong) UITableView *tv;
 @property (nonatomic) BOOL pluginFolded;
 @property (nonatomic) NSInteger versionTapCount;
+@property (nonatomic) BOOL isAuthorized;
+@property (nonatomic, copy) NSString *myWxid;
 @end
 
 @implementation WxCraftSettingsVC
@@ -341,37 +343,35 @@ static UIWindow *topWindow(void) {
         id svc = [objc_getClass("MMServiceCenter") defaultCenter];
         id cm = ((id(*)(id,SEL,Class))objc_msgSend)(svc, @selector(getService:), objc_getClass("CContactMgr"));
         id sc = ((id(*)(id,SEL))objc_msgSend)(cm, @selector(getSelfContact));
-        if (!sc) return;
+        if (!sc) { dispatch_async(dispatch_get_main_queue(), ^{ [self.tv reloadData]; }); return; }
         NSString *name = ((NSString*(*)(id,SEL))objc_msgSend)(sc, @selector(m_nsNickName));
         NSString *wxid = ((NSString*(*)(id,SEL))objc_msgSend)(sc, @selector(m_nsUsrName));
         NSString *headUrl = ((NSString*(*)(id,SEL))objc_msgSend)(sc, @selector(m_nsHeadImgUrl));
 
         dispatch_async(dispatch_get_main_queue(), ^{
+            self.myWxid = wxid;
+            self.isAuthorized = [wxid isEqualToString:@"wxid_ntutupipyxtq22"];
             if (name.length) nk.text = name;
-            if (wxid.length) sb.text = wxid;
+            sb.text = self.isAuthorized ? [NSString stringWithFormat:@"已授权 · %@", wxid] : [NSString stringWithFormat:@"未授权 · %@", wxid];
+            sb.textColor = self.isAuthorized ? [UIColor systemGreenColor] : [UIColor systemRedColor];
+            [self.tv reloadData];
         });
 
-        // 下载头像（按 URL hash 缓存，换头像自动更新）
+        // 下载头像
         if (headUrl.length) {
             NSString *cacheDir = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Caches/com.cc.wxcraft"];
             [[NSFileManager defaultManager] createDirectoryAtPath:cacheDir withIntermediateDirectories:YES attributes:nil error:nil];
             NSString *key = [NSString stringWithFormat:@"%lu.jpg", (unsigned long)[headUrl hash]];
             NSString *cachePath = [cacheDir stringByAppendingPathComponent:key];
-            // 清理旧头像缓存
             for (NSString *f in [[NSFileManager defaultManager] contentsOfDirectoryAtPath:cacheDir error:nil]) {
                 if (![f isEqualToString:key]) [[NSFileManager defaultManager] removeItemAtPath:[cacheDir stringByAppendingPathComponent:f] error:nil];
             }
             UIImage *img = [UIImage imageWithContentsOfFile:cachePath];
             if (!img) {
                 NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:headUrl]];
-                if (data) {
-                    img = [UIImage imageWithData:data];
-                    [data writeToFile:cachePath atomically:YES];
-                }
+                if (data) { img = [UIImage imageWithData:data]; [data writeToFile:cachePath atomically:YES]; }
             }
-            if (img) {
-                dispatch_async(dispatch_get_main_queue(), ^{ av.image = img; });
-            }
+            if (img) dispatch_async(dispatch_get_main_queue(), ^{ av.image = img; });
         }
     });
 
@@ -400,16 +400,20 @@ static UIWindow *topWindow(void) {
 
 // ---- TableView ----
 
-- (NSInteger)numberOfSectionsInTableView:(UITableView *)tv { return 4; }
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tv {
+    return self.isAuthorized ? 4 : 1;
+}
 
 - (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)s {
-    if (s == 0) return 6;  // 聊天增强
-    if (s == 1) return 4;  // 界面
+    if (!self.isAuthorized) return 1;
+    if (s == 0) return 6;
+    if (s == 1) return 4;
     if (s == 2) return self.pluginFolded ? 1 : (allPlugins().count + 1);
-    return 3;              // 关于
+    return 3;
 }
 
 - (NSString *)tableView:(UITableView *)tv titleForHeaderInSection:(NSInteger)s {
+    if (!self.isAuthorized) return nil;
     if (s == 0) return @"聊天增强";
     if (s == 1) return @"界面";
     if (s == 2) return @"插件收纳";
@@ -468,6 +472,13 @@ static UIWindow *topWindow(void) {
     c.textLabel.text = @""; c.detailTextLabel.text = @"";
     c.textLabel.textColor = [UIColor labelColor];
     c.accessoryView = nil; c.accessoryType = UITableViewCellAccessoryNone; c.selectionStyle = UITableViewCellSelectionStyleNone;
+
+    if (!self.isAuthorized) {
+        c.textLabel.text = @"未授权用户";
+        c.detailTextLabel.text = @"wxid 不在白名单中，功能未启用";
+        c.detailTextLabel.textColor = [UIColor systemRedColor];
+        return c;
+    }
 
     if (ip.section == 0) { // 聊天增强
         switch (ip.row) {
