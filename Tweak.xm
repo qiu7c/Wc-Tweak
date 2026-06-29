@@ -65,6 +65,53 @@ static UIWindow *topWindow(void) {
 }
 
 // ============================================================
+// 微信内部类声明
+// ============================================================
+
+@interface CContact : NSObject
+@property (nonatomic, copy) NSString *m_nsUsrName;
+@property (nonatomic, copy) NSString *m_nsNickName;
+@property (nonatomic, copy) NSString *m_nsHeadImgUrl;
+@end
+
+@interface CContactMgr : NSObject
+- (CContact *)getSelfContact;
+- (CContact *)getContactByName:(NSString *)name;
+@end
+
+@interface MMServiceCenter : NSObject
++ (instancetype)defaultCenter;
+- (id)getService:(Class)cls;
+@end
+
+@interface CMessageMgr : NSObject
+- (void)AddEmoticonMsg:(NSString *)msg MsgWrap:(CMessageWrap *)msgWrap;
+- (void)onRevokeMsg:(CMessageWrap *)arg1;
+- (void)AddLocalMsg:(NSString *)session MsgWrap:(CMessageWrap *)msg fixTime:(unsigned int)fix NewMsgArriveNotify:(unsigned int)notify;
+@end
+
+@interface CMessageWrap (RevokeExt)
++ (BOOL)isSenderFromMsgWrap:(CMessageWrap *)wrap;
+- (id)initWithMsgType:(int)type;
+- (void)setM_nsFromUsr:(NSString *)usr;
+- (void)setM_nsToUsr:(NSString *)usr;
+- (void)setM_nsContent:(NSString *)content;
+- (void)setM_uiStatus:(unsigned int)status;
+- (void)setM_uiCreateTime:(unsigned int)time;
+@property (nonatomic, copy) NSString *m_nsContent;
+@property (nonatomic, copy) NSString *m_nsFromUsr;
+@property (nonatomic, copy) NSString *m_nsToUsr;
+- (unsigned int)m_uiCreateTime;
+@end
+
+@interface CMessageWrap (GameExt)
+@property (nonatomic, assign) int m_uiGameType;
+@property (nonatomic, copy) NSString *m_nsContent;
+- (void)setM_nsEmoticonMD5:(NSString *)md5;
+- (void)setM_uiGameContent:(int)content;
+@end
+
+// ============================================================
 // 通用弹窗 (后续功能复用)
 // ============================================================
 
@@ -628,42 +675,6 @@ static UIWindow *topWindow(void) {
 // 游戏作弊
 // ============================================================
 
-@interface CMessageMgr : NSObject
-- (void)AddEmoticonMsg:(NSString *)msg MsgWrap:(CMessageWrap *)msgWrap;
-- (void)onRevokeMsg:(CMessageWrap *)arg1;
-- (void)AddLocalMsg:(NSString *)session MsgWrap:(CMessageWrap *)msg fixTime:(unsigned int)fix NewMsgArriveNotify:(unsigned int)notify;
-@end
-
-@interface CMessageWrap (RevokeExt)
-+ (BOOL)isSenderFromMsgWrap:(CMessageWrap *)wrap;
-- (id)initWithMsgType:(int)type;
-- (void)setM_nsFromUsr:(NSString *)usr;
-- (void)setM_nsToUsr:(NSString *)usr;
-- (void)setM_nsContent:(NSString *)content;
-- (void)setM_uiStatus:(unsigned int)status;
-- (void)setM_uiCreateTime:(unsigned int)time;
-@property (nonatomic, copy) NSString *m_nsContent;
-@property (nonatomic, copy) NSString *m_nsFromUsr;
-@property (nonatomic, copy) NSString *m_nsToUsr;
-- (unsigned int)m_uiCreateTime;
-@end
-
-@interface CContact : NSObject
-@property (nonatomic, copy) NSString *m_nsUsrName;
-@property (nonatomic, copy) NSString *m_nsNickName;
-@property (nonatomic, copy) NSString *m_nsHeadImgUrl;
-@end
-
-@interface CContactMgr : NSObject
-- (CContact *)getSelfContact;
-- (CContact *)getContactByName:(NSString *)name;
-@end
-
-@interface MMServiceCenter : NSObject
-+ (instancetype)defaultCenter;
-- (id)getService:(Class)cls;
-@end
-
 @interface SyncCmdHandler : NSObject
 - (_Bool)BatchAddMsg:(_Bool)arg1 ShowPush:(_Bool)arg2;
 @end
@@ -679,12 +690,6 @@ static UIWindow *topWindow(void) {
 @interface MMServiceCenter : NSObject
 + (id)defaultCenter;
 - (id)getService:(Class)cls;
-@end
-@interface CMessageWrap (GameExt)
-@property (nonatomic, assign) int m_uiGameType;
-@property (nonatomic, copy) NSString *m_nsContent;
-- (void)setM_nsEmoticonMD5:(NSString *)md5;
-- (void)setM_uiGameContent:(int)content;
 @end
 
 %hook CMessageMgr
