@@ -68,6 +68,17 @@ static UIWindow *topWindow(void) {
 // 微信内部类声明
 // ============================================================
 
+@interface CMessageWrap : NSObject
+@property (nonatomic, assign) int m_uiMessageType;
+@property (nonatomic, copy) NSString *m_nsFromUsr;
+@property (nonatomic, copy) NSString *m_nsToUsr;
+@property (nonatomic, assign) unsigned int m_uiStatus;
+@property (nonatomic, copy) NSString *m_nsContent;
+- (int)yoType;
+- (int)m_uiGameType;
+- (unsigned int)m_uiCreateTime;
+@end
+
 @interface CContact : NSObject
 @property (nonatomic, copy) NSString *m_nsUsrName;
 @property (nonatomic, copy) NSString *m_nsNickName;
@@ -645,18 +656,6 @@ static UIWindow *topWindow(void) {
 + (instancetype)currentContext;
 - (NSString *)userName;
 @end
-@interface CMessageWrap : NSObject
-@property (nonatomic, assign) int m_uiMessageType;
-@property (nonatomic, copy) NSString *m_nsFromUsr;
-@property (nonatomic, assign) unsigned int m_uiStatus;
-- (int)yoType;
-@end
-@interface WCWatchNativeMgr : NSObject
-- (void)displaySignalMessageWithDelay:(CMessageWrap *)msg;
-@end
-
-%hook WCWatchNativeMgr
-- (void)OnMsgNotAddDBNotify:(NSString *)chatName MsgWrap:(CMessageWrap *)msg {
     BOOL should = NO;
     if (pref(kDuangKey) && msg && msg.m_uiMessageType == 63) {
         MMContext *ctx = [%c(MMContext) currentContext];
