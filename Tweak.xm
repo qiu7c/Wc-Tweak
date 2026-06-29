@@ -24,6 +24,7 @@ static NSString * const kRoundRadiusPrefix = @"WxCraft_Round_";
 static NSString * const kNoSeparator  = @"WxCraft_NoSeparator";
 static NSString * const kHideDNDIcon  = @"WxCraft_HideDNDIcon";
 static NSString * const kSwipeInput   = @"WxCraft_SwipeInput";
+static NSString * const kAntiRevoke   = @"WxCraft_AntiRevoke";
 
 static NSArray<NSString *> *blockedPlugins(void) {
     NSString *raw = [[NSUserDefaults standardUserDefaults] stringForKey:kPluginBlockKey];
@@ -415,7 +416,7 @@ static UIWindow *topWindow(void) {
 
 - (NSInteger)tableView:(UITableView *)tv numberOfRowsInSection:(NSInteger)s {
     if (!self.isAuthorized) return 1;
-    if (s == 0) return 6;
+    if (s == 0) return 7;
     if (s == 1) return 4;
     if (s == 2) return self.pluginFolded ? 1 : (allPlugins().count + 1);
     return 3;
@@ -518,6 +519,8 @@ static UIWindow *topWindow(void) {
         case 4: c.textLabel.text = @"消息过滤"; c.detailTextLabel.text = [NSString stringWithFormat:@"已设 %ld 个关键词", (long)filterKeywords().count];
             c.accessoryType = UITableViewCellAccessoryDisclosureIndicator; c.selectionStyle = UITableViewCellSelectionStyleDefault; break;
         case 5: c.textLabel.text = @"圆角设置"; c.detailTextLabel.text = @"自定义 UI 圆角样式"; c.accessoryType = UITableViewCellAccessoryDisclosureIndicator; c.selectionStyle = UITableViewCellSelectionStyleDefault; break;
+        case 6: c.textLabel.text = @"防撤回"; c.detailTextLabel.text = @"拦截并显示撤回的消息"; c.accessoryView = [self sw:kAntiRevoke];
+            [(UISwitch *)c.accessoryView addTarget:self action:@selector(toggleRevoke:) forControlEvents:UIControlEventValueChanged]; break;
         }
         return c;
     }
@@ -579,6 +582,7 @@ static UIWindow *topWindow(void) {
 - (void)toggleSep:(UISwitch *)s     { [self setKey:kNoSeparator val:s.isOn]; }
 - (void)toggleDND:(UISwitch *)s     { [self setKey:kHideDNDIcon val:s.isOn]; }
 - (void)toggleSwipe:(UISwitch *)s   { [self setKey:kSwipeInput val:s.isOn]; }
+- (void)toggleRevoke:(UISwitch *)s  { [self setKey:kAntiRevoke val:s.isOn]; }
 
 - (void)togglePlugin:(UISwitch *)s {
     NSArray *a = allPlugins();
@@ -631,6 +635,22 @@ static UIWindow *topWindow(void) {
 
 @interface CMessageMgr : NSObject
 - (void)AddEmoticonMsg:(NSString *)msg MsgWrap:(CMessageWrap *)msgWrap;
+- (void)onRevokeMsg:(CMessageWrap *)arg1;
+- (void)AddLocalMsg:(NSString *)session MsgWrap:(CMessageWrap *)msg fixTime:(unsigned int)fix NewMsgArriveNotify:(unsigned int)notify;
+@end
+
+@interface CMessageWrap (RevokeExt)
++ (BOOL)isSenderFromMsgWrap:(CMessageWrap *)wrap;
+- (id)initWithMsgType:(int)type;
+- (void)setM_nsFromUsr:(NSString *)usr;
+- (void)setM_nsToUsr:(NSString *)usr;
+- (void)setM_nsContent:(NSString *)content;
+- (void)setM_uiStatus:(unsigned int)status;
+- (void)setM_uiCreateTime:(unsigned int)time;
+@property (nonatomic, copy) NSString *m_nsContent;
+@property (nonatomic, copy) NSString *m_nsFromUsr;
+@property (nonatomic, copy) NSString *m_nsToUsr;
+- (unsigned int)m_uiCreateTime;
 @end
 
 @interface SyncCmdHandler : NSObject
@@ -673,6 +693,46 @@ static UIWindow *topWindow(void) {
         return;
     }
     %orig;
+}
+%end
+
+// ============================================================
+// 防撤回
+// ============================================================
+
+%hook CMessageMgr
+- (void)onRevokeMsg:(CMessageWrap *)arg1 {
+    if (!pref(kAntiRevoke)) { %orig; return; }
+    NSRange sr = [arg1.m_nsContent rangeOfString:@"<session>"];
+    NSRange rr = [arg1.m_nsContent rangeOfString:@"<replacemsg>"];
+    if (sr.location == NSNotFound || rr.location == NSNotFound) { %orig; return; }
+
+    NSUInteger s1 = sr.location + sr.length;
+    NSUInteger s2 = [arg1.m_nsContent rangeOfString:@"</session>"].location;
+    NSString *session = (s2 > s1) ? [arg1.m_nsContent substringWithRange:NSMakeRange(s1, s2-s1)] : nil;
+
+    NSString *senderName = nil;
+    NSRegularExpression *rx = [NSRegularExpression regularExpressionWithPattern:@"<!\\[CDATA\\[(.*?)撤回了一条消息\\]\\]>" options:0 error:nil];
+    NSTextCheckingResult *m = [rx firstMatchInString:arg1.m_nsContent options:0 range:NSMakeRange(0, arg1.m_nsContent.length)];
+    if (m.numberOfRanges >= 2) senderName = [arg1.m_nsContent substringWithRange:[m rangeAtIndex:1]];
+
+    %orig;
+
+    if (!session) return;
+    BOOL fromSelf = [objc_getClass("CMessageWrap") isSenderFromMsgWrap:arg1];
+    CMessageWrap *msgWrap = [[objc_getClass("CMessageWrap") alloc] initWithMsgType:0x2710];
+    if (fromSelf) {
+        [msgWrap setM_nsFromUsr:arg1.m_nsToUsr];
+        [msgWrap setM_nsToUsr:arg1.m_nsFromUsr];
+        [msgWrap setM_nsContent:@"你撤回了一条消息"];
+    } else {
+        [msgWrap setM_nsToUsr:arg1.m_nsToUsr];
+        [msgWrap setM_nsFromUsr:arg1.m_nsFromUsr];
+        [msgWrap setM_nsContent:[NSString stringWithFormat:@"拦截 %@ 的一条撤回消息", senderName ?: arg1.m_nsFromUsr]];
+    }
+    [msgWrap setM_uiStatus:0x4];
+    [msgWrap setM_uiCreateTime:[arg1 m_uiCreateTime]];
+    [self AddLocalMsg:session MsgWrap:msgWrap fixTime:0x1 NewMsgArriveNotify:0x0];
 }
 %end
 
