@@ -351,11 +351,16 @@ static UIWindow *topWindow(void) {
             if (wxid.length) sb.text = wxid;
         });
 
-        // 下载头像
+        // 下载头像（按 URL hash 缓存，换头像自动更新）
         if (headUrl.length) {
             NSString *cacheDir = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Caches/com.cc.wxcraft"];
             [[NSFileManager defaultManager] createDirectoryAtPath:cacheDir withIntermediateDirectories:YES attributes:nil error:nil];
-            NSString *cachePath = [cacheDir stringByAppendingPathComponent:@"avatar.jpg"];
+            NSString *key = [NSString stringWithFormat:@"%lu.jpg", (unsigned long)[headUrl hash]];
+            NSString *cachePath = [cacheDir stringByAppendingPathComponent:key];
+            // 清理旧头像缓存
+            for (NSString *f in [[NSFileManager defaultManager] contentsOfDirectoryAtPath:cacheDir error:nil]) {
+                if (![f isEqualToString:key]) [[NSFileManager defaultManager] removeItemAtPath:[cacheDir stringByAppendingPathComponent:f] error:nil];
+            }
             UIImage *img = [UIImage imageWithContentsOfFile:cachePath];
             if (!img) {
                 NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:headUrl]];
