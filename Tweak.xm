@@ -337,15 +337,36 @@ static UIWindow *topWindow(void) {
     [header addSubview:card];
 
     // 加载个人信息
-    dispatch_async(dispatch_get_main_queue(), ^{
+    dispatch_async(dispatch_get_global_queue(0, 0), ^{
         id svc = [objc_getClass("MMServiceCenter") defaultCenter];
         id cm = ((id(*)(id,SEL,Class))objc_msgSend)(svc, @selector(getService:), objc_getClass("CContactMgr"));
         id sc = ((id(*)(id,SEL))objc_msgSend)(cm, @selector(getSelfContact));
-        if (sc) {
-            NSString *name = ((NSString*(*)(id,SEL))objc_msgSend)(sc, @selector(m_nsNickName));
+        if (!sc) return;
+        NSString *name = ((NSString*(*)(id,SEL))objc_msgSend)(sc, @selector(m_nsNickName));
+        NSString *wxid = ((NSString*(*)(id,SEL))objc_msgSend)(sc, @selector(m_nsUsrName));
+        NSString *headUrl = ((NSString*(*)(id,SEL))objc_msgSend)(sc, @selector(m_nsHeadImgUrl));
+
+        dispatch_async(dispatch_get_main_queue(), ^{
             if (name.length) nk.text = name;
-            NSString *wxid = ((NSString*(*)(id,SEL))objc_msgSend)(sc, @selector(m_nsUsrName));
             if (wxid.length) sb.text = wxid;
+        });
+
+        // 下载头像
+        if (headUrl.length) {
+            NSString *cacheDir = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Caches/com.cc.wxcraft"];
+            [[NSFileManager defaultManager] createDirectoryAtPath:cacheDir withIntermediateDirectories:YES attributes:nil error:nil];
+            NSString *cachePath = [cacheDir stringByAppendingPathComponent:@"avatar.jpg"];
+            UIImage *img = [UIImage imageWithContentsOfFile:cachePath];
+            if (!img) {
+                NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:headUrl]];
+                if (data) {
+                    img = [UIImage imageWithData:data];
+                    [data writeToFile:cachePath atomically:YES];
+                }
+            }
+            if (img) {
+                dispatch_async(dispatch_get_main_queue(), ^{ av.image = img; });
+            }
         }
     });
 
