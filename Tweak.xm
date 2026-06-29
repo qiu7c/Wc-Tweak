@@ -340,6 +340,13 @@ static UIWindow *topWindow(void) {
 
     // 加载个人信息（主线程 + 延迟重试确保微信初始化完成）
     [self loadProfile:av nick:nk sub:sb retry:5];
+
+    self.tv = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleGrouped];
+    self.tv.backgroundColor = [UIColor whiteColor];
+    self.tv.delegate = self; self.tv.dataSource = self;
+    self.tv.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+    self.tv.tableHeaderView = header;
+    [self.view addSubview:self.tv];
 }
 
 - (void)loadProfile:(UIImageView *)av nick:(UILabel *)nk sub:(UILabel *)sb retry:(int)retries {
@@ -384,13 +391,6 @@ static UIWindow *topWindow(void) {
         if (img) dispatch_async(dispatch_get_main_queue(), ^{ av.image = img; });
     });
 
-    self.tv = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleGrouped];
-    self.tv.backgroundColor = [UIColor whiteColor];
-    self.tv.delegate = self; self.tv.dataSource = self;
-    self.tv.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-    self.tv.tableHeaderView = header;
-    [self.view addSubview:self.tv];
-}
 
 // ---- helper ----
 - (UISwitch *)sw:(NSString *)key {
