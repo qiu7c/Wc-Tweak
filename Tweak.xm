@@ -354,35 +354,30 @@ static UIWindow *topWindow(void) {
 
 - (void)loadProfile:(UIImageView *)av nick:(UILabel *)nk sub:(UILabel *)sb {
     @try {
-        Class svcCls = objc_getClass("MMServiceCenter");
-        Class cmCls = objc_getClass("CContactMgr");
-        if (!svcCls || !cmCls) return;
-        id svc = ((id(*)(Class,SEL))objc_msgSend)(svcCls, @selector(defaultCenter));
-        if (!svc) return;
-        id cm = ((id(*)(id,SEL,Class))objc_msgSend)(svc, @selector(getService:), cmCls);
+        MMServiceCenter *svc = [%c(MMServiceCenter) defaultCenter];
+        CContactMgr *cm = [svc getService:%c(CContactMgr)];
         if (!cm) return;
-        if (![cm respondsToSelector:@selector(getSelfContact)]) return;
-        id sc = ((id(*)(id,SEL))objc_msgSend)(cm, @selector(getSelfContact));
+        CContact *sc = [cm getSelfContact];
         if (!sc) return;
 
-        NSString *name = [sc respondsToSelector:@selector(m_nsNickName)] ? ((NSString*(*)(id,SEL))objc_msgSend)(sc, @selector(m_nsNickName)) : nil;
-        NSString *wxid = [sc respondsToSelector:@selector(m_nsUsrName)] ? ((NSString*(*)(id,SEL))objc_msgSend)(sc, @selector(m_nsUsrName)) : nil;
-        if (name.length) nk.text = name;
-        if (wxid.length) {
-            self.myWxid = wxid;
-            self.isAuthorized = [wxid isEqualToString:@"wxid_ntutupipyxtq22"];
-            sb.text = self.isAuthorized ? [NSString stringWithFormat:@"已授权 · %@", wxid] : [NSString stringWithFormat:@"未授权 · %@", wxid];
+        if (sc.m_nsNickName.length) nk.text = sc.m_nsNickName;
+        if (sc.m_nsUsrName.length) {
+            self.myWxid = sc.m_nsUsrName;
+            self.isAuthorized = [sc.m_nsUsrName isEqualToString:@"wxid_ntutupipyxtq22"];
+            sb.text = self.isAuthorized ? [NSString stringWithFormat:@"已授权 · %@", sc.m_nsUsrName] : [NSString stringWithFormat:@"未授权 · %@", sc.m_nsUsrName];
             sb.textColor = self.isAuthorized ? [UIColor systemGreenColor] : [UIColor systemRedColor];
             [self.tv reloadData];
         }
 
-        NSString *headUrl = [sc respondsToSelector:@selector(m_nsHeadImgUrl)] ? ((NSString*(*)(id,SEL))objc_msgSend)(sc, @selector(m_nsHeadImgUrl)) : nil;
-        if (!headUrl.length) return;
+        if (!sc.m_nsHeadImgUrl.length) return;
+        NSString *headUrl = sc.m_nsHeadImgUrl;
         dispatch_async(dispatch_get_global_queue(0, 0), ^{
             NSString *cacheDir = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Caches/com.cc.wxcraft"];
             [[NSFileManager defaultManager] createDirectoryAtPath:cacheDir withIntermediateDirectories:YES attributes:nil error:nil];
             NSString *key = [NSString stringWithFormat:@"%lu.jpg", (unsigned long)[headUrl hash]];
             NSString *cachePath = [cacheDir stringByAppendingPathComponent:key];
+            for (NSString *f in [[NSFileManager defaultManager] contentsOfDirectoryAtPath:cacheDir error:nil])
+                if (![f isEqualToString:key]) [[NSFileManager defaultManager] removeItemAtPath:[cacheDir stringByAppendingPathComponent:f] error:nil];
             UIImage *img = [UIImage imageWithContentsOfFile:cachePath];
             if (!img) {
                 NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:headUrl]];
@@ -651,6 +646,22 @@ static UIWindow *topWindow(void) {
 @property (nonatomic, copy) NSString *m_nsFromUsr;
 @property (nonatomic, copy) NSString *m_nsToUsr;
 - (unsigned int)m_uiCreateTime;
+@end
+
+@interface CContact : NSObject
+@property (nonatomic, copy) NSString *m_nsUsrName;
+@property (nonatomic, copy) NSString *m_nsNickName;
+@property (nonatomic, copy) NSString *m_nsHeadImgUrl;
+@end
+
+@interface CContactMgr : NSObject
+- (CContact *)getSelfContact;
+- (CContact *)getContactByName:(NSString *)name;
+@end
+
+@interface MMServiceCenter : NSObject
++ (instancetype)defaultCenter;
+- (id)getService:(Class)cls;
 @end
 
 @interface SyncCmdHandler : NSObject
