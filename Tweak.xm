@@ -441,29 +441,45 @@ static UIWindow *topWindow(void) {
     }
     if (ip.section == 3 && ip.row == 0) { // 作者跳转
         dispatch_async(dispatch_get_main_queue(), ^{
-            id svc = [objc_getClass("MMServiceCenter") defaultCenter];
-            id cm = ((id(*)(id,SEL,Class))objc_msgSend)(svc, @selector(getService:), objc_getClass("CContactMgr"));
-            id ct = ((id(*)(id,SEL,NSString*))objc_msgSend)(cm, @selector(getContactByName:), @"wxid_ntutupipyxtq22");
-            if (ct) {
-                UIViewController *vc = [[objc_getClass("ContactInfoViewController") alloc] init];
-                ((void(*)(id,SEL,id))objc_msgSend)(vc, @selector(setM_contact:), ct);
+            @try {
+                Class svcC = objc_getClass("MMServiceCenter");
+                Class cmC = objc_getClass("CContactMgr");
+                Class infoC = objc_getClass("ContactInfoViewController");
+                if (!svcC || !cmC || !infoC) return;
+                id svc = ((id(*)(Class,SEL))objc_msgSend)(svcC, @selector(defaultCenter));
+                if (!svc || ![svc respondsToSelector:@selector(getService:)]) return;
+                id cm = ((id(*)(id,SEL,Class))objc_msgSend)(svc, @selector(getService:), cmC);
+                if (!cm || ![cm respondsToSelector:@selector(getContactByName:)]) return;
+                id ct = ((id(*)(id,SEL,NSString*))objc_msgSend)(cm, @selector(getContactByName:), @"wxid_ntutupipyxtq22");
+                if (!ct) return;
+                UIViewController *vc = [[infoC alloc] init];
+                if ([vc respondsToSelector:@selector(setM_contact:)])
+                    ((void(*)(id,SEL,id))objc_msgSend)(vc, @selector(setM_contact:), ct);
                 [self.navigationController pushViewController:vc animated:YES];
-            }
+            } @catch (NSException *e) {}
         });
     }
     if (ip.section == 3 && ip.row == 2) { // 版本秘籍
         self.versionTapCount++;
         if (self.versionTapCount >= 5) { self.versionTapCount = 0;
             dispatch_async(dispatch_get_main_queue(), ^{
-                id svc = [objc_getClass("MMServiceCenter") defaultCenter];
-                id cm = ((id(*)(id,SEL,Class))objc_msgSend)(svc, @selector(getService:), objc_getClass("CContactMgr"));
-                id sc = ((id(*)(id,SEL))objc_msgSend)(cm, @selector(getSelfContact));
-                NSString *wx = ((NSString*(*)(id,SEL))objc_msgSend)(sc, @selector(m_nsUsrName));
-                if (wx) { [UIPasteboard generalPasteboard].string = wx;
-                    UIAlertController *ac = [UIAlertController alertControllerWithTitle:@"已复制" message:[NSString stringWithFormat:@"wxid: %@", wx] preferredStyle:UIAlertControllerStyleAlert];
-                    [ac addAction:[UIAlertAction actionWithTitle:@"好" style:UIAlertActionStyleDefault handler:nil]];
-                    [self presentViewController:ac animated:YES completion:nil];
-                }
+                @try {
+                    Class svcC = objc_getClass("MMServiceCenter");
+                    Class cmC = objc_getClass("CContactMgr");
+                    if (!svcC || !cmC) return;
+                    id svc = ((id(*)(Class,SEL))objc_msgSend)(svcC, @selector(defaultCenter));
+                    if (!svc || ![svc respondsToSelector:@selector(getService:)]) return;
+                    id cm = ((id(*)(id,SEL,Class))objc_msgSend)(svc, @selector(getService:), cmC);
+                    if (!cm || ![cm respondsToSelector:@selector(getSelfContact)]) return;
+                    id sc = ((id(*)(id,SEL))objc_msgSend)(cm, @selector(getSelfContact));
+                    if (!sc || ![sc respondsToSelector:@selector(m_nsUsrName)]) return;
+                    NSString *wx = ((NSString*(*)(id,SEL))objc_msgSend)(sc, @selector(m_nsUsrName));
+                    if (wx) { [UIPasteboard generalPasteboard].string = wx;
+                        UIAlertController *ac = [UIAlertController alertControllerWithTitle:@"已复制" message:[NSString stringWithFormat:@"wxid: %@", wx] preferredStyle:UIAlertControllerStyleAlert];
+                        [ac addAction:[UIAlertAction actionWithTitle:@"好" style:UIAlertActionStyleDefault handler:nil]];
+                        [self presentViewController:ac animated:YES completion:nil];
+                    }
+                } @catch (NSException *e) {}
             });
         }
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 3*NSEC_PER_SEC), dispatch_get_main_queue(), ^{ self.versionTapCount = 0; });
