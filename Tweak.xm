@@ -338,56 +338,14 @@ static UIWindow *topWindow(void) {
     UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, 110)];
     [header addSubview:card];
 
-    // 加载个人信息（主线程 + 延迟重试确保微信初始化完成）
-    [self loadProfile:av nick:nk sub:sb retry:5];
-
     self.tv = [[UITableView alloc] initWithFrame:self.view.bounds style:UITableViewStyleGrouped];
     self.tv.backgroundColor = [UIColor whiteColor];
     self.tv.delegate = self; self.tv.dataSource = self;
     self.tv.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
     self.tv.tableHeaderView = header;
     [self.view addSubview:self.tv];
-}
 
-- (void)loadProfile:(UIImageView *)av nick:(UILabel *)nk sub:(UILabel *)sb retry:(int)retries {
-    Class svcCls = objc_getClass("MMServiceCenter");
-    Class cmCls = objc_getClass("CContactMgr");
-    if (!svcCls || !cmCls) { if (retries > 0) dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5*NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ [self loadProfile:av nick:nk sub:sb retry:retries-1]; }); return; }
-    id svc = ((id(*)(Class,SEL))objc_msgSend)(svcCls, @selector(defaultCenter));
-    if (!svc) { if (retries > 0) dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5*NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ [self loadProfile:av nick:nk sub:sb retry:retries-1]; }); return; }
-    id cm = ((id(*)(id,SEL,Class))objc_msgSend)(svc, @selector(getService:), cmCls);
-    if (!cm) { if (retries > 0) dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5*NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ [self loadProfile:av nick:nk sub:sb retry:retries-1]; }); return; }
-    id sc = ((id(*)(id,SEL))objc_msgSend)(cm, @selector(getSelfContact));
-    if (!sc) { if (retries > 0) dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5*NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ [self loadProfile:av nick:nk sub:sb retry:retries-1]; }); return; }
-
-    NSString *name = ((NSString*(*)(id,SEL))objc_msgSend)(sc, @selector(m_nsNickName));
-    NSString *wxid = ((NSString*(*)(id,SEL))objc_msgSend)(sc, @selector(m_nsUsrName));
-    if (name.length) nk.text = name;
-    if (wxid.length) {
-        self.myWxid = wxid;
-        self.isAuthorized = wxid.length > 0;
-        sb.text = [NSString stringWithFormat:@"已授权 · %@", wxid];
-        sb.textColor = [UIColor systemGreenColor];
-    }
-    [self.tv reloadData];
-
-    // 下载头像
-    NSString *headUrl = ((NSString*(*)(id,SEL))objc_msgSend)(sc, @selector(m_nsHeadImgUrl));
-    if (!headUrl.length) return;
-    dispatch_async(dispatch_get_global_queue(0, 0), ^{
-        NSString *cacheDir = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Caches/com.cc.wxcraft"];
-        [[NSFileManager defaultManager] createDirectoryAtPath:cacheDir withIntermediateDirectories:YES attributes:nil error:nil];
-        NSString *key = [NSString stringWithFormat:@"%lu.jpg", (unsigned long)[headUrl hash]];
-        NSString *cachePath = [cacheDir stringByAppendingPathComponent:key];
-        for (NSString *f in [[NSFileManager defaultManager] contentsOfDirectoryAtPath:cacheDir error:nil])
-            if (![f isEqualToString:key]) [[NSFileManager defaultManager] removeItemAtPath:[cacheDir stringByAppendingPathComponent:f] error:nil];
-        UIImage *img = [UIImage imageWithContentsOfFile:cachePath];
-        if (!img) {
-            NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:headUrl]];
-            if (data) { img = [UIImage imageWithData:data]; [data writeToFile:cachePath atomically:YES]; }
-        }
-        if (img) dispatch_async(dispatch_get_main_queue(), ^{ av.image = img; });
-    });
+    self.isAuthorized = YES;
 }
 
 // ---- helper ----
