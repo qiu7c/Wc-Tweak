@@ -345,7 +345,51 @@ static UIWindow *topWindow(void) {
     self.tv.tableHeaderView = header;
     [self.view addSubview:self.tv];
 
-    self.isAuthorized = YES;
+    self.isAuthorized = YES; // 先默认授权，异步加载完成后再精确判断
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [self loadProfile:av nick:nk sub:sb];
+    });
+}
+
+- (void)loadProfile:(UIImageView *)av nick:(UILabel *)nk sub:(UILabel *)sb {
+    Class svcCls = objc_getClass("MMServiceCenter");
+    Class cmCls = objc_getClass("CContactMgr");
+    if (!svcCls || !cmCls) return;
+    id svc = ((id(*)(Class,SEL))objc_msgSend)(svcCls, @selector(defaultCenter));
+    if (!svc) return;
+    id cm = ((id(*)(id,SEL,Class))objc_msgSend)(svc, @selector(getService:), cmCls);
+    if (!cm) return;
+    id sc = ((id(*)(id,SEL))objc_msgSend)(cm, @selector(getSelfContact));
+    if (!sc) return;
+
+    NSString *name = ((NSString*(*)(id,SEL))objc_msgSend)(sc, @selector(m_nsNickName));
+    NSString *wxid = ((NSString*(*)(id,SEL))objc_msgSend)(sc, @selector(m_nsUsrName));
+    if (name.length) nk.text = name;
+    if (wxid.length) {
+        self.myWxid = wxid;
+        self.isAuthorized = [wxid isEqualToString:@"wxid_ntutupipyxtq22"];
+        sb.text = self.isAuthorized ? [NSString stringWithFormat:@"已授权 · %@", wxid] : [NSString stringWithFormat:@"未授权 · %@", wxid];
+        sb.textColor = self.isAuthorized ? [UIColor systemGreenColor] : [UIColor systemRedColor];
+        [self.tv reloadData];
+    }
+
+    // 下载头像
+    NSString *headUrl = ((NSString*(*)(id,SEL))objc_msgSend)(sc, @selector(m_nsHeadImgUrl));
+    if (!headUrl.length) return;
+    dispatch_async(dispatch_get_global_queue(0, 0), ^{
+        NSString *cacheDir = [NSHomeDirectory() stringByAppendingPathComponent:@"Library/Caches/com.cc.wxcraft"];
+        [[NSFileManager defaultManager] createDirectoryAtPath:cacheDir withIntermediateDirectories:YES attributes:nil error:nil];
+        NSString *key = [NSString stringWithFormat:@"%lu.jpg", (unsigned long)[headUrl hash]];
+        NSString *cachePath = [cacheDir stringByAppendingPathComponent:key];
+        for (NSString *f in [[NSFileManager defaultManager] contentsOfDirectoryAtPath:cacheDir error:nil])
+            if (![f isEqualToString:key]) [[NSFileManager defaultManager] removeItemAtPath:[cacheDir stringByAppendingPathComponent:f] error:nil];
+        UIImage *img = [UIImage imageWithContentsOfFile:cachePath];
+        if (!img) {
+            NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:headUrl]];
+            if (data) { img = [UIImage imageWithData:data]; [data writeToFile:cachePath atomically:YES]; }
+        }
+        if (img) dispatch_async(dispatch_get_main_queue(), ^{ av.image = img; });
+    });
 }
 
 // ---- helper ----
