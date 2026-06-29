@@ -652,10 +652,12 @@ static UIWindow *topWindow(void) {
 // 小信号弹窗 (WCDuang)
 // ============================================================
 
-@interface MMContext : NSObject
-+ (instancetype)currentContext;
-- (NSString *)userName;
+@interface WCWatchNativeMgr : NSObject
+- (void)displaySignalMessageWithDelay:(CMessageWrap *)msg;
 @end
+
+%hook WCWatchNativeMgr
+- (void)OnMsgNotAddDBNotify:(NSString *)chatName MsgWrap:(CMessageWrap *)msg {
     BOOL should = NO;
     if (pref(kDuangKey) && msg && msg.m_uiMessageType == 63) {
         MMContext *ctx = [%c(MMContext) currentContext];
