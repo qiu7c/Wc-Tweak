@@ -660,8 +660,8 @@ static UIWindow *topWindow(void) {
 - (void)OnMsgNotAddDBNotify:(NSString *)chatName MsgWrap:(CMessageWrap *)msg {
     BOOL should = NO;
     if (pref(kDuangKey) && msg && msg.m_uiMessageType == 63) {
-        id ctx = [objc_getClass("MMContext") currentContext];
-        NSString *me = [ctx userName];
+        id ctx = ((id(*)(Class,SEL))objc_msgSend)(objc_getClass("MMContext"), @selector(currentContext));
+        NSString *me = ((NSString*(*)(id,SEL))objc_msgSend)(ctx, @selector(userName));
         should = ![msg.m_nsFromUsr isEqualToString:me] && msg.m_uiStatus != 4 && [msg yoType] != 1;
     }
     %orig;
