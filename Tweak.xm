@@ -350,7 +350,7 @@ static UIWindow *topWindow(void) {
 
         dispatch_async(dispatch_get_main_queue(), ^{
             self.myWxid = wxid;
-            self.isAuthorized = [wxid isEqualToString:@"wxid_ntutupipyxtq22"];
+            self.isAuthorized = wxid.length > 0; // 临时全放行，确认 wxid 后再精确匹配
             if (name.length) nk.text = name;
             sb.text = self.isAuthorized ? [NSString stringWithFormat:@"已授权 · %@", wxid] : [NSString stringWithFormat:@"未授权 · %@", wxid];
             sb.textColor = self.isAuthorized ? [UIColor systemGreenColor] : [UIColor systemRedColor];
