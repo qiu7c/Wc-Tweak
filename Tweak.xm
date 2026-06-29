@@ -688,7 +688,6 @@ static UIWindow *topWindow(void) {
 - (void)onConfirmBtnPress:(id)sender;
 @end
 
-@end
 
 %hook CMessageMgr
 - (void)AddEmoticonMsg:(NSString *)msg MsgWrap:(CMessageWrap *)msgWrap {
