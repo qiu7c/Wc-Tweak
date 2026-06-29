@@ -841,8 +841,7 @@ static BOOL shouldFilterMsg(CMessageWrap *wrap) {
 
 %new
 - (void)wxc_pasteText {
-    NSString *paste = [UIPasteboard generalPasteboard].string;
-    if (paste.length) self.text = paste;
+    [self paste:nil]; // 系统粘贴，文字/图片/文件都能处理
 }
 %end
 
