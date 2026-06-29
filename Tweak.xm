@@ -350,17 +350,15 @@ static UIWindow *topWindow(void) {
 }
 
 - (void)loadProfile:(UIImageView *)av nick:(UILabel *)nk sub:(UILabel *)sb retry:(int)retries {
-    id svc = [objc_getClass("MMServiceCenter") defaultCenter];
-    id cm = ((id(*)(id,SEL,Class))objc_msgSend)(svc, @selector(getService:), objc_getClass("CContactMgr"));
+    Class svcCls = objc_getClass("MMServiceCenter");
+    Class cmCls = objc_getClass("CContactMgr");
+    if (!svcCls || !cmCls) { if (retries > 0) dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5*NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ [self loadProfile:av nick:nk sub:sb retry:retries-1]; }); return; }
+    id svc = ((id(*)(Class,SEL))objc_msgSend)(svcCls, @selector(defaultCenter));
+    if (!svc) { if (retries > 0) dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5*NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ [self loadProfile:av nick:nk sub:sb retry:retries-1]; }); return; }
+    id cm = ((id(*)(id,SEL,Class))objc_msgSend)(svc, @selector(getService:), cmCls);
+    if (!cm) { if (retries > 0) dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5*NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ [self loadProfile:av nick:nk sub:sb retry:retries-1]; }); return; }
     id sc = ((id(*)(id,SEL))objc_msgSend)(cm, @selector(getSelfContact));
-
-    if (!sc && retries > 0) {
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            [self loadProfile:av nick:nk sub:sb retry:retries-1];
-        });
-        return;
-    }
-    if (!sc) return;
+    if (!sc) { if (retries > 0) dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.5*NSEC_PER_SEC)), dispatch_get_main_queue(), ^{ [self loadProfile:av nick:nk sub:sb retry:retries-1]; }); return; }
 
     NSString *name = ((NSString*(*)(id,SEL))objc_msgSend)(sc, @selector(m_nsNickName));
     NSString *wxid = ((NSString*(*)(id,SEL))objc_msgSend)(sc, @selector(m_nsUsrName));
