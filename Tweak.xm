@@ -390,7 +390,7 @@ static UIWindow *topWindow(void) {
         }
         if (img) dispatch_async(dispatch_get_main_queue(), ^{ av.image = img; });
     });
-
+}
 
 // ---- helper ----
 - (UISwitch *)sw:(NSString *)key {
