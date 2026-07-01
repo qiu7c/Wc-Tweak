@@ -1,61 +1,3 @@
-
-@interface SyncCmdHandler : NSObject
-- (_Bool)BatchAddMsg:(_Bool)arg1 ShowPush:(_Bool)arg2;
-@end
-
-@interface MultiDeviceCardLoginContentView : UIView
-- (void)onTapConfirmButton;
-@end
-
-@interface ExtraDeviceLoginViewController : UIViewController
-- (void)onConfirmBtnPress:(id)sender;
-@end
-
-@interface WCDataItem : NSObject
-- (bool)isVideoAd;
-- (bool)isAd;
-@end
-
-@interface WKCompositingView : UIView
-@end
-
-@interface WAAppTaskSplashADConfig : NSObject
-- (bool)canShowSplashADWindow;
-- (bool)launchShow;
-@end
-
-@interface MMScreenShotForwardButton : UIButton
-@end
-
-@interface MMTextView : UITextView
-@property (nonatomic, copy) NSString *text;
-- (void)wxc_clearText;
-- (void)wxc_pasteText;
-@end
-
-@interface MMGrowTextView : UIView
-@end
-
-@interface InputToolContainerView : UIView
-@end
-
-@interface UIImageView (WxCraftDND)
-- (void)wxc_checkDND;
-@end
-
-@interface _UITableViewCellSeparatorView : UIView
-@end
-
-@interface MMTableViewCell : UITableViewCell
-@end
-
-@interface WCPluginsMgr : NSObject
-+ (instancetype)sharedInstance;
-- (void)registerControllerWithTitle:(NSString *)title version:(NSString *)version controller:(NSString *)controller;
-- (void)registerSwitchWithTitle:(NSString *)title key:(NSString *)key;
-@end
-// WxCraft
-// 作者: CC
 // 微信增强: 小信号弹窗 + 游戏作弊 + 插件收纳管理
 
 #import <UIKit/UIKit.h>
@@ -703,6 +645,56 @@ static UIWindow *topWindow(void) {
 }
 
 @end
+
+@interface SyncCmdHandler : NSObject
+- (_Bool)BatchAddMsg:(_Bool)arg1 ShowPush:(_Bool)arg2;
+@end
+
+@interface MultiDeviceCardLoginContentView : UIView
+- (void)onTapConfirmButton;
+@end
+
+@interface ExtraDeviceLoginViewController : UIViewController
+- (void)onConfirmBtnPress:(id)sender;
+@end
+
+@interface WCDataItem : NSObject
+- (bool)isVideoAd;
+- (bool)isAd;
+@end
+
+@interface WKCompositingView : UIView
+@end
+
+@interface WAAppTaskSplashADConfig : NSObject
+- (bool)canShowSplashADWindow;
+- (bool)launchShow;
+@end
+
+@interface MMScreenShotForwardButton : UIButton
+@end
+
+@interface MMTextView : UITextView
+@end
+
+@interface MMGrowTextView : UIView
+@end
+
+@interface InputToolContainerView : UIView
+@end
+
+@interface _UITableViewCellSeparatorView : UIView
+@end
+
+@interface MMTableViewCell : UITableViewCell
+@end
+
+@interface WCPluginsMgr : NSObject
++ (instancetype)sharedInstance;
+- (void)registerControllerWithTitle:(NSString *)title version:(NSString *)version controller:(NSString *)controller;
+- (void)registerSwitchWithTitle:(NSString *)title key:(NSString *)key;
+@end
+
 
 // ============================================================
 // 小信号弹窗 (WCDuang)
