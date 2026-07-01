@@ -837,7 +837,6 @@ static BOOL shouldFilterMsg(CMessageWrap *wrap) {
 @end
 
 %hook WAAppTaskSplashADConfig
-- (bool)canShowSplashADWindow { if (pref(kAdBlockKey)) return NO; return %orig; }
 - (bool)launchShow { if (pref(kAdBlockKey)) return NO; return %orig; }
 %end
 
@@ -860,7 +859,6 @@ static BOOL shouldFilterMsg(CMessageWrap *wrap) {
 // 输入框增强 (MMTextView = 真正的输入框)
 // ============================================================
 
-@end
 
 %hook MMTextView
 - (void)didMoveToSuperview {
