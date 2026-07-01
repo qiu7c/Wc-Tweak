@@ -101,6 +101,18 @@ static UIWindow *topWindow(void) {
 - (void)AddLocalMsg:(NSString *)session MsgWrap:(CMessageWrap *)msg fixTime:(unsigned int)fix NewMsgArriveNotify:(unsigned int)notify;
 @end
 
+@interface WCFacade : NSObject
+- (bool)isTimelineVideoSightAutoPlayEnable;
+@end
+
+@interface WCDataItem : NSObject
+- (bool)isVideoAd;
+- (bool)isAd;
+@end
+
+@interface WKCompositingView : UIView
+@end
+
 @interface CMessageWrap (RevokeExt)
 + (BOOL)isSenderFromMsgWrap:(CMessageWrap *)wrap;
 - (id)initWithMsgType:(int)type;
