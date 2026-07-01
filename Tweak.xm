@@ -1,3 +1,59 @@
+
+@interface SyncCmdHandler : NSObject
+- (_Bool)BatchAddMsg:(_Bool)arg1 ShowPush:(_Bool)arg2;
+@end
+
+@interface MultiDeviceCardLoginContentView : UIView
+- (void)onTapConfirmButton;
+@end
+
+@interface ExtraDeviceLoginViewController : UIViewController
+- (void)onConfirmBtnPress:(id)sender;
+@end
+
+@interface WCDataItem : NSObject
+- (bool)isVideoAd;
+- (bool)isAd;
+@end
+
+@interface WKCompositingView : UIView
+@end
+
+@interface WAAppTaskSplashADConfig : NSObject
+- (bool)canShowSplashADWindow;
+- (bool)launchShow;
+@end
+
+@interface MMScreenShotForwardButton : UIButton
+@end
+
+@interface MMTextView : UITextView
+@property (nonatomic, copy) NSString *text;
+- (void)wxc_clearText;
+- (void)wxc_pasteText;
+@end
+
+@interface MMGrowTextView : UIView
+@end
+
+@interface InputToolContainerView : UIView
+@end
+
+@interface UIImageView (WxCraftDND)
+- (void)wxc_checkDND;
+@end
+
+@interface _UITableViewCellSeparatorView : UIView
+@end
+
+@interface MMTableViewCell : UITableViewCell
+@end
+
+@interface WCPluginsMgr : NSObject
++ (instancetype)sharedInstance;
+- (void)registerControllerWithTitle:(NSString *)title version:(NSString *)version controller:(NSString *)controller;
+- (void)registerSwitchWithTitle:(NSString *)title key:(NSString *)key;
+@end
 // WxCraft
 // 作者: CC
 // 微信增强: 小信号弹窗 + 游戏作弊 + 插件收纳管理
@@ -652,9 +708,6 @@ static UIWindow *topWindow(void) {
 // 小信号弹窗 (WCDuang)
 // ============================================================
 
-@interface WCWatchNativeMgr : NSObject
-- (void)displaySignalMessageWithDelay:(CMessageWrap *)msg;
-@end
 
 %hook WCWatchNativeMgr
 - (void)OnMsgNotAddDBNotify:(NSString *)chatName MsgWrap:(CMessageWrap *)msg {
@@ -745,11 +798,19 @@ static UIWindow *topWindow(void) {
 // ============================================================
 
 // 朋友圈视频自动播放
-
+%hook WCFacade
+- (bool)isTimelineVideoSightAutoPlayEnable {
+    if (pref(kAdBlockKey)) return NO;
+    return %orig;
+}
+%end
 
 // 视频号 / 朋友圈 / 文章广告
 
-
+%hook WCDataItem
+- (bool)isVideoAd { if (pref(kAdBlockKey)) return NO; return %orig; }
+- (bool)isAd { if (pref(kAdBlockKey)) return NO; return %orig; }
+%end
 
 
 // 公众号文章底部大图广告 (原生层 hook WKCompositingView)
@@ -1017,9 +1078,6 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
 // 隐藏免打扰图标
 // ============================================================
 
-@interface UIImageView (WxCraftDND)
-- (void)wxc_checkDND;
-@end
 
 %hook UIImageView
 - (void)didMoveToSuperview {
