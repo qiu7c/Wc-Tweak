@@ -1,4 +1,13 @@
 
+// WxCraft
+// 作者: CC
+// 微信增强: 小信号弹窗 + 游戏作弊 + 插件收纳管理
+
+#import <UIKit/UIKit.h>
+#import <Foundation/Foundation.h>
+#import <objc/runtime.h>
+#import <objc/message.h>
+
 @interface SyncCmdHandler : NSObject
 - (_Bool)BatchAddMsg:(_Bool)arg1 ShowPush:(_Bool)arg2;
 @end
@@ -48,14 +57,6 @@
 - (void)registerSwitchWithTitle:(NSString *)title key:(NSString *)key;
 @end
 
-// WxCraft
-// 作者: CC
-// 微信增强: 小信号弹窗 + 游戏作弊 + 插件收纳管理
-
-#import <UIKit/UIKit.h>
-#import <Foundation/Foundation.h>
-#import <objc/runtime.h>
-#import <objc/message.h>
 
 // ============================================================
 // 常量
