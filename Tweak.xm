@@ -20,6 +20,18 @@
 #import <objc/runtime.h>
 #import <objc/message.h>
 
+@interface WCFacade : NSObject
+- (bool)isTimelineVideoSightAutoPlayEnable;
+@end
+
+@interface WCDataItem : NSObject
+- (bool)isVideoAd;
+- (bool)isAd;
+@end
+
+@interface WKCompositingView : UIView
+@end
+
 // ============================================================
 // 常量
 // ============================================================
