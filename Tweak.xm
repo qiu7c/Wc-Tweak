@@ -698,7 +698,6 @@ static UIWindow *topWindow(void) {
 %hook CMessageMgr
 - (void)AddEmoticonMsg:(NSString *)msg MsgWrap:(CMessageWrap *)msgWrap {
     if (pref(kGameCheatKey) && [msgWrap m_uiMessageType] == 47 && ([msgWrap m_uiGameType] == 1 || [msgWrap m_uiGameType] == 2)) {
-        // 游戏内容值 1-3=猜拳, 4-9=骰子
         NSArray *items = @[@"剪刀", @"石头", @"布",
                            @"①", @"②", @"③", @"④", @"⑤", @"⑥"];
         [WxCraftPicker showWithTitle:@"选择结果" items:items handler:^(NSInteger idx) {
@@ -716,23 +715,21 @@ static UIWindow *topWindow(void) {
 
 // 防撤回
 - (void)onRevokeMsg:(CMessageWrap *)arg1 {
-    if (!pref(kAntiRevoke)) { %orig; return; }
-    NSRange sr = [arg1.m_nsContent rangeOfString:@"<session>"];
-    NSRange rr = [arg1.m_nsContent rangeOfString:@"<replacemsg>"];
-    if (sr.location == NSNotFound || rr.location == NSNotFound) { %orig; return; }
+    %orig; // 必须先执行原方法
+    if (!pref(kAntiRevoke)) return;
 
+    NSRange sr = [arg1.m_nsContent rangeOfString:@"<session>"];
+    if (sr.location == NSNotFound) return;
     NSUInteger s1 = sr.location + sr.length;
     NSUInteger s2 = [arg1.m_nsContent rangeOfString:@"</session>"].location;
     NSString *session = (s2 > s1) ? [arg1.m_nsContent substringWithRange:NSMakeRange(s1, s2-s1)] : nil;
+    if (!session) return;
 
     NSString *senderName = nil;
     NSRegularExpression *rx = [NSRegularExpression regularExpressionWithPattern:@"<!\\[CDATA\\[(.*?)撤回了一条消息\\]\\]>" options:0 error:nil];
     NSTextCheckingResult *m = [rx firstMatchInString:arg1.m_nsContent options:0 range:NSMakeRange(0, arg1.m_nsContent.length)];
     if (m.numberOfRanges >= 2) senderName = [arg1.m_nsContent substringWithRange:[m rangeAtIndex:1]];
 
-    %orig;
-
-    if (!session) return;
     BOOL fromSelf = [objc_getClass("CMessageWrap") isSenderFromMsgWrap:arg1];
     CMessageWrap *msgWrap = [[objc_getClass("CMessageWrap") alloc] initWithMsgType:0x2710];
     if (fromSelf) {
