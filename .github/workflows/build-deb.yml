@@ -18,7 +18,7 @@ jobs:
           brew install ldid 2>/dev/null || true
           export THEOS=$HOME/theos
           echo "THEOS=$THEOS" >> $GITHUB_ENV
-          git clone --recursive --shallow-since=2026-06-25 https://github.com/theos/theos.git $THEOS --quiet
+          git clone --recursive --depth 1 https://github.com/theos/theos.git $THEOS --quiet
 
       - name: Build package
         run: |

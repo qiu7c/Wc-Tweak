@@ -1,4 +1,17 @@
 // WxCraft
+
+@interface WCFacade : NSObject
+- (bool)isTimelineVideoSightAutoPlayEnable;
+@end
+
+@interface WCDataItem : NSObject
+- (bool)isVideoAd;
+- (bool)isAd;
+@end
+
+@interface WKCompositingView : UIView
+@end
+
 // 作者: CC
 // 微信增强: 小信号弹窗 + 游戏作弊 + 插件收纳管理
 
@@ -676,17 +689,8 @@ static UIWindow *topWindow(void) {
 // 游戏作弊
 // ============================================================
 
-@interface SyncCmdHandler : NSObject
-- (_Bool)BatchAddMsg:(_Bool)arg1 ShowPush:(_Bool)arg2;
-@end
 
-@interface MultiDeviceCardLoginContentView : UIView
-- (void)onTapConfirmButton;
-@end
 
-@interface ExtraDeviceLoginViewController : UIViewController
-- (void)onConfirmBtnPress:(id)sender;
-@end
 
 
 %hook CMessageMgr
@@ -762,18 +766,12 @@ static UIWindow *topWindow(void) {
 %end
 
 // 视频号 / 朋友圈 / 文章广告
-@interface WCDataItem : NSObject
-- (bool)isVideoAd;
-- (bool)isAd;
-@end
 
 %hook WCDataItem
 - (bool)isVideoAd { if (pref(kAdBlockKey)) return NO; return %orig; }
 - (bool)isAd { if (pref(kAdBlockKey)) return NO; return %orig; }
 %end
 
-@interface WKCompositingView : UIView
-@end
 
 // 公众号文章底部大图广告 (原生层 hook WKCompositingView)
 %hook WKCompositingView
@@ -850,10 +848,6 @@ static BOOL shouldFilterMsg(CMessageWrap *wrap) {
 %end
 
 // 小程序开屏广告
-@interface WAAppTaskSplashADConfig : NSObject
-- (bool)canShowSplashADWindow;
-- (bool)launchShow;
-@end
 
 %hook WAAppTaskSplashADConfig
 - (bool)canShowSplashADWindow { if (pref(kAdBlockKey)) return NO; return %orig; }
@@ -864,8 +858,6 @@ static BOOL shouldFilterMsg(CMessageWrap *wrap) {
 // 截图转发按钮去除
 // ============================================================
 
-@interface MMScreenShotForwardButton : UIButton
-@end
 
 %hook MMScreenShotForwardButton
 - (void)didMoveToSuperview {
@@ -882,11 +874,6 @@ static BOOL shouldFilterMsg(CMessageWrap *wrap) {
 // 输入框增强 (MMTextView = 真正的输入框)
 // ============================================================
 
-@interface MMTextView : UITextView
-@property (nonatomic, copy) NSString *text;
-- (void)wxc_clearText;
-- (void)wxc_pasteText;
-@end
 
 %hook MMTextView
 - (void)didMoveToSuperview {
@@ -943,8 +930,6 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
 }
 
 // MMGrowTextView 圆角
-@interface MMGrowTextView : UIView
-@end
 %hook MMGrowTextView
 - (void)didMoveToSuperview {
     %orig;
@@ -956,8 +941,6 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
 %end
 
 // InputToolContainerView 圆角
-@interface InputToolContainerView : UIView
-@end
 %hook InputToolContainerView
 - (void)didMoveToSuperview {
     %orig;
@@ -1055,9 +1038,6 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
 // 隐藏免打扰图标
 // ============================================================
 
-@interface UIImageView (WxCraftDND)
-- (void)wxc_checkDND;
-@end
 
 %hook UIImageView
 - (void)didMoveToSuperview {
@@ -1087,8 +1067,6 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
 // 全局去除分割线
 // ============================================================
 
-@interface _UITableViewCellSeparatorView : UIView
-@end
 
 
 %hook _UITableViewCellSeparatorView
@@ -1102,8 +1080,6 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
 // 插件收纳隐藏 (UI 层过滤已注册的)
 // ============================================================
 
-@interface MMTableViewCell : UITableViewCell
-@end
 
 %hook MMTableViewCell
 - (void)didMoveToSuperview {
@@ -1126,11 +1102,6 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
 // ============================================================
 // ============================================================
 
-@interface WCPluginsMgr : NSObject
-+ (instancetype)sharedInstance;
-- (void)registerControllerWithTitle:(NSString *)title version:(NSString *)version controller:(NSString *)controller;
-- (void)registerSwitchWithTitle:(NSString *)title key:(NSString *)key;
-@end
 
 %hook WCPluginsMgr
 - (void)registerControllerWithTitle:(NSString *)title version:(NSString *)version controller:(NSString *)controller {
@@ -1160,3 +1131,4 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
             @"WxCraft", @"1.0.0", @"WxCraftSettingsVC");
     }
 }
+
