@@ -713,13 +713,8 @@ static UIWindow *topWindow(void) {
     }
     %orig;
 }
-%end
 
-// ============================================================
 // 防撤回
-// ============================================================
-
-%hook CMessageMgr
 - (void)onRevokeMsg:(CMessageWrap *)arg1 {
     if (!pref(kAntiRevoke)) { %orig; return; }
     NSRange sr = [arg1.m_nsContent rangeOfString:@"<session>"];
