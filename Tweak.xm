@@ -102,7 +102,21 @@ static BOOL pref(NSString *key) {
     return [[NSUserDefaults standardUserDefaults] boolForKey:key];
 }
 
-static NSArray<NSString *> *filterKeywords(void);
+static NSArray<NSString *> *filterKeywords(void) {
+    NSString *raw = [[NSUserDefaults standardUserDefaults] stringForKey:kMsgFilterKWKey];
+    if (!raw.length) return @[];
+    return [raw componentsSeparatedByString:@","];
+}
+
+static BOOL shouldFilterMsg(CMessageWrap *wrap) {
+    if (!pref(kMsgFilterKey)) return NO;
+    NSString *content = wrap.m_nsContent;
+    if (!content.length) return NO;
+    for (NSString *kw in filterKeywords()) {
+        if (kw.length && [content rangeOfString:kw].location != NSNotFound) return YES;
+    }
+    return NO;
+}
 static NSSet<NSString *> *roundEnabledClasses(void);
 static NSDictionary<NSString *, NSString *> *roundElements(void);
 static CGFloat roundRadius(NSString *cls);
