@@ -1,17 +1,4 @@
 // WxCraft
-
-@interface WCFacade : NSObject
-- (bool)isTimelineVideoSightAutoPlayEnable;
-@end
-
-@interface WCDataItem : NSObject
-- (bool)isVideoAd;
-- (bool)isAd;
-@end
-
-@interface WKCompositingView : UIView
-@end
-
 // 作者: CC
 // 微信增强: 小信号弹窗 + 游戏作弊 + 插件收纳管理
 
@@ -19,18 +6,6 @@
 #import <Foundation/Foundation.h>
 #import <objc/runtime.h>
 #import <objc/message.h>
-
-@interface WCFacade : NSObject
-- (bool)isTimelineVideoSightAutoPlayEnable;
-@end
-
-@interface WCDataItem : NSObject
-- (bool)isVideoAd;
-- (bool)isAd;
-@end
-
-@interface WKCompositingView : UIView
-@end
 
 // ============================================================
 // 常量
@@ -679,6 +654,19 @@ static UIWindow *topWindow(void) {
 
 @interface WCWatchNativeMgr : NSObject
 - (void)displaySignalMessageWithDelay:(CMessageWrap *)msg;
+@end
+
+
+@interface WCFacade : NSObject
+- (bool)isTimelineVideoSightAutoPlayEnable;
+@end
+
+@interface WCDataItem : NSObject
+- (bool)isVideoAd;
+- (bool)isAd;
+@end
+
+@interface WKCompositingView : UIView
 @end
 
 %hook WCWatchNativeMgr
