@@ -754,9 +754,6 @@ static UIWindow *topWindow(void) {
 // ============================================================
 
 // 朋友圈视频自动播放
-@interface WCFacade : NSObject
-- (bool)isTimelineVideoSightAutoPlayEnable;
-@end
 %hook WCFacade
 - (bool)isTimelineVideoSightAutoPlayEnable {
     if (pref(kAdBlockKey)) return NO;
