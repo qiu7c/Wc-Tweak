@@ -693,6 +693,10 @@ static UIWindow *topWindow(void) {
 + (instancetype)sharedInstance;
 - (void)registerControllerWithTitle:(NSString *)title version:(NSString *)version controller:(NSString *)controller;
 - (void)registerSwitchWithTitle:(NSString *)title key:(NSString *)key;
+@interface WCWatchNativeMgr : NSObject
+- (void)displaySignalMessageWithDelay:(CMessageWrap *)msg;
+@end
+
 @end
 
 
