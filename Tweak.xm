@@ -101,18 +101,6 @@ static UIWindow *topWindow(void) {
 - (void)AddLocalMsg:(NSString *)session MsgWrap:(CMessageWrap *)msg fixTime:(unsigned int)fix NewMsgArriveNotify:(unsigned int)notify;
 @end
 
-@interface WCFacade : NSObject
-- (bool)isTimelineVideoSightAutoPlayEnable;
-@end
-
-@interface WCDataItem : NSObject
-- (bool)isVideoAd;
-- (bool)isAd;
-@end
-
-@interface WKCompositingView : UIView
-@end
-
 @interface CMessageWrap (RevokeExt)
 + (BOOL)isSenderFromMsgWrap:(CMessageWrap *)wrap;
 - (id)initWithMsgType:(int)type;
@@ -757,19 +745,11 @@ static UIWindow *topWindow(void) {
 // ============================================================
 
 // 朋友圈视频自动播放
-%hook WCFacade
-- (bool)isTimelineVideoSightAutoPlayEnable {
-    if (pref(kAdBlockKey)) return NO;
-    return %orig;
-}
-%end
+
 
 // 视频号 / 朋友圈 / 文章广告
 
-%hook WCDataItem
-- (bool)isVideoAd { if (pref(kAdBlockKey)) return NO; return %orig; }
-- (bool)isAd { if (pref(kAdBlockKey)) return NO; return %orig; }
-%end
+
 
 
 // 公众号文章底部大图广告 (原生层 hook WKCompositingView)
