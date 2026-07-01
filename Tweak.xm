@@ -768,11 +768,6 @@ static UIWindow *topWindow(void) {
 %end
 
 // 视频号 / 朋友圈 / 文章广告
-@interface WCDataItem : NSObject
-- (bool)isVideoAd;
-- (bool)isAd;
-@end
-
 %hook WCDataItem
 - (bool)isVideoAd { if (pref(kAdBlockKey)) return NO; return %orig; }
 - (bool)isAd { if (pref(kAdBlockKey)) return NO; return %orig; }
