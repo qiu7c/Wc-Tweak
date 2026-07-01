@@ -756,7 +756,7 @@ static UIWindow *topWindow(void) {
 
 // 朋友圈视频自动播放
 %hook WCFacade
-- (bool)isTimelineVideoSightAutoPlayEnable {
+- (BOOL)isTimelineVideoSightAutoPlayEnable {
     if (pref(kAdBlockKey)) return NO;
     return %orig;
 }
@@ -764,13 +764,13 @@ static UIWindow *topWindow(void) {
 
 // 视频号 / 朋友圈 / 文章广告
 @interface WCDataItem : NSObject
-- (bool)isVideoAd;
-- (bool)isAd;
+- (BOOL)isVideoAd;
+- (BOOL)isAd;
 @end
 
 %hook WCDataItem
-- (bool)isVideoAd { if (pref(kAdBlockKey)) return NO; return %orig; }
-- (bool)isAd { if (pref(kAdBlockKey)) return NO; return %orig; }
+- (BOOL)isVideoAd { if (pref(kAdBlockKey)) return NO; return %orig; }
+- (BOOL)isAd { if (pref(kAdBlockKey)) return NO; return %orig; }
 %end
 
 @interface WKCompositingView : UIView
@@ -852,13 +852,13 @@ static BOOL shouldFilterMsg(CMessageWrap *wrap) {
 
 // 小程序开屏广告
 @interface WAAppTaskSplashADConfig : NSObject
-- (bool)canShowSplashADWindow;
-- (bool)launchShow;
+- (BOOL)canShowSplashADWindow;
+- (BOOL)launchShow;
 @end
 
 %hook WAAppTaskSplashADConfig
-- (bool)canShowSplashADWindow { if (pref(kAdBlockKey)) return NO; return %orig; }
-- (bool)launchShow { if (pref(kAdBlockKey)) return NO; return %orig; }
+- (BOOL)canShowSplashADWindow { if (pref(kAdBlockKey)) return NO; return %orig; }
+- (BOOL)launchShow { if (pref(kAdBlockKey)) return NO; return %orig; }
 %end
 
 // ============================================================
