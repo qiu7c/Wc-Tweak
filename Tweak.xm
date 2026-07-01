@@ -363,9 +363,6 @@ static UIWindow *topWindow(void) {
 @property (nonatomic) NSInteger versionTapCount;
 @property (nonatomic) BOOL isAuthorized;
 @property (nonatomic, copy) NSString *myWxid;
-@property (nonatomic, strong) UIImageView *avatarView;
-@property (nonatomic, strong) UILabel *nickLabel;
-@property (nonatomic, strong) UILabel *subLabel;
 @end
 
 @implementation WxCraftSettingsVC
@@ -382,20 +379,20 @@ static UIWindow *topWindow(void) {
     card.backgroundColor = [UIColor whiteColor];
     card.layer.cornerRadius = 14;
 
-    self.avatarView = [[UIImageView alloc] initWithFrame:CGRectMake(16, 13, 60, 60)];
-    self.avatarView.layer.cornerRadius = 30; self.avatarView.clipsToBounds = YES;
-    self.avatarView.backgroundColor = [UIColor systemGray4Color];
-    self.avatarView.image = [UIImage systemImageNamed:@"person.crop.circle.fill"];
-    self.avatarView.tintColor = [UIColor systemGray2Color];
-    [card addSubview:self.avatarView];
+    UIImageView *av = [[UIImageView alloc] initWithFrame:CGRectMake(16, 13, 60, 60)];
+    av.layer.cornerRadius = 30; av.clipsToBounds = YES;
+    av.backgroundColor = [UIColor systemGray4Color];
+    av.image = [UIImage systemImageNamed:@"person.crop.circle.fill"];
+    av.tintColor = [UIColor systemGray2Color];
+    [card addSubview:av];
 
-    self.nickLabel = [[UILabel alloc] initWithFrame:CGRectMake(90, 18, pw - 106, 24)];
-    self.nickLabel.font = [UIFont systemFontOfSize:18 weight:UIFontWeightSemibold]; self.nickLabel.text = @"WxCraft";
-    [card addSubview:self.nickLabel];
+    UILabel *nk = [[UILabel alloc] initWithFrame:CGRectMake(90, 18, pw - 106, 24)];
+    nk.font = [UIFont systemFontOfSize:18 weight:UIFontWeightSemibold]; nk.text = @"WxCraft";
+    [card addSubview:nk];
 
-    self.subLabel = [[UILabel alloc] initWithFrame:CGRectMake(90, 44, pw - 106, 20)];
-    self.subLabel.font = [UIFont systemFontOfSize:13]; self.subLabel.textColor = [UIColor secondaryLabelColor]; self.subLabel.text = @"微信增强工具";
-    [card addSubview:self.subLabel];
+    UILabel *sb = [[UILabel alloc] initWithFrame:CGRectMake(90, 44, pw - 106, 20)];
+    sb.font = [UIFont systemFontOfSize:13]; sb.textColor = [UIColor secondaryLabelColor]; sb.text = @"微信增强工具";
+    [card addSubview:sb];
 
     UIView *header = [[UIView alloc] initWithFrame:CGRectMake(0, 0, self.view.bounds.size.width, 110)];
     [header addSubview:card];
@@ -407,16 +404,13 @@ static UIWindow *topWindow(void) {
     self.tv.tableHeaderView = header;
     [self.view addSubview:self.tv];
 
-    self.isAuthorized = YES;
+    self.isAuthorized = YES; // 先默认授权，异步加载完成后再精确判断
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [self loadProfile:av nick:nk sub:sb];
+    });
 }
 
-- (void)viewDidAppear:(BOOL)animated {
-    [super viewDidAppear:animated];
-    static BOOL loaded = NO;
-    if (!loaded) { loaded = YES; [self loadProfile]; }
-}
-
-- (void)loadProfile {
+- (void)loadProfile:(UIImageView *)av nick:(UILabel *)nk sub:(UILabel *)sb {
     @try {
         MMServiceCenter *svc = [%c(MMServiceCenter) defaultCenter];
         CContactMgr *cm = [svc getService:%c(CContactMgr)];
@@ -424,12 +418,12 @@ static UIWindow *topWindow(void) {
         CContact *sc = [cm getSelfContact];
         if (!sc) return;
 
-        if (sc.m_nsNickName.length) self.nickLabel.text = sc.m_nsNickName;
+        if (sc.m_nsNickName.length) nk.text = sc.m_nsNickName;
         if (sc.m_nsUsrName.length) {
             self.myWxid = sc.m_nsUsrName;
             self.isAuthorized = [sc.m_nsUsrName isEqualToString:@"wxid_ntutupipyxtq22"];
-            self.subLabel.text = self.isAuthorized ? [NSString stringWithFormat:@"已授权 · %@", sc.m_nsUsrName] : [NSString stringWithFormat:@"未授权 · %@", sc.m_nsUsrName];
-            self.subLabel.textColor = self.isAuthorized ? [UIColor systemGreenColor] : [UIColor systemRedColor];
+            sb.text = self.isAuthorized ? [NSString stringWithFormat:@"已授权 · %@", sc.m_nsUsrName] : [NSString stringWithFormat:@"未授权 · %@", sc.m_nsUsrName];
+            sb.textColor = self.isAuthorized ? [UIColor systemGreenColor] : [UIColor systemRedColor];
             [self.tv reloadData];
         }
 
@@ -447,7 +441,7 @@ static UIWindow *topWindow(void) {
                 NSData *data = [NSData dataWithContentsOfURL:[NSURL URLWithString:headUrl]];
                 if (data) { img = [UIImage imageWithData:data]; [data writeToFile:cachePath atomically:YES]; }
             }
-            if (img) dispatch_async(dispatch_get_main_queue(), ^{ self.avatarView.image = img; });
+            if (img) dispatch_async(dispatch_get_main_queue(), ^{ av.image = img; });
         });
     } @catch (NSException *e) {}
 }
@@ -768,6 +762,11 @@ static UIWindow *topWindow(void) {
 %end
 
 // 视频号 / 朋友圈 / 文章广告
+@interface WCDataItem : NSObject
+- (bool)isVideoAd;
+- (bool)isAd;
+@end
+
 %hook WCDataItem
 - (bool)isVideoAd { if (pref(kAdBlockKey)) return NO; return %orig; }
 - (bool)isAd { if (pref(kAdBlockKey)) return NO; return %orig; }
