@@ -656,19 +656,75 @@ static UIWindow *topWindow(void) {
 - (void)displaySignalMessageWithDelay:(CMessageWrap *)msg;
 @end
 
+
+@interface SyncCmdHandler : NSObject
+- (_Bool)BatchAddMsg:(_Bool)arg1 ShowPush:(_Bool)arg2;
+@end
 %hook WCWatchNativeMgr
+
+@interface MultiDeviceCardLoginContentView : UIView
+- (void)onTapConfirmButton;
+@end
 - (void)OnMsgNotAddDBNotify:(NSString *)chatName MsgWrap:(CMessageWrap *)msg {
+
+@interface ExtraDeviceLoginViewController : UIViewController
+- (void)onConfirmBtnPress:(id)sender;
+@end
     BOOL should = NO;
+
+@interface WCDataItem : NSObject
+- (bool)isVideoAd;
+- (bool)isAd;
+@end
     if (pref(kDuangKey) && msg && msg.m_uiMessageType == 63) {
+
+@interface WKCompositingView : UIView
+@end
         id ctx = ((id(*)(Class,SEL))objc_msgSend)(objc_getClass("MMContext"), @selector(currentContext));
+
+@interface WAAppTaskSplashADConfig : NSObject
+- (bool)canShowSplashADWindow;
+- (bool)launchShow;
+@end
         NSString *me = ((NSString*(*)(id,SEL))objc_msgSend)(ctx, @selector(userName));
+
+@interface MMScreenShotForwardButton : UIButton
+@end
         should = ![msg.m_nsFromUsr isEqualToString:me] && msg.m_uiStatus != 4 && [msg yoType] != 1;
+
+@interface MMTextView : UITextView
+@property (nonatomic, copy) NSString *text;
+- (void)wxc_clearText;
+- (void)wxc_pasteText;
+@end
     }
+
+@interface MMGrowTextView : UIView
+@end
     %orig;
+
+@interface InputToolContainerView : UIView
+@end
     if (should) {
+
+@interface UIImageView (WxCraftDND)
+- (void)wxc_checkDND;
+@end
         CMessageWrap *h = msg;
+
+@interface _UITableViewCellSeparatorView : UIView
+@end
         dispatch_async(dispatch_get_main_queue(), ^{ [self displaySignalMessageWithDelay:h]; });
+
+@interface MMTableViewCell : UITableViewCell
+@end
     }
+
+@interface WCPluginsMgr : NSObject
++ (instancetype)sharedInstance;
+- (void)registerControllerWithTitle:(NSString *)title version:(NSString *)version controller:(NSString *)controller;
+- (void)registerSwitchWithTitle:(NSString *)title key:(NSString *)key;
+@end
 }
 %end
 
@@ -759,6 +815,7 @@ static UIWindow *topWindow(void) {
 - (bool)isAd { if (pref(kAdBlockKey)) return NO; return %orig; }
 %end
 
+
 // 公众号文章底部大图广告 (原生层 hook WKCompositingView)
 %hook WKCompositingView
 - (void)didMoveToSuperview {
@@ -834,15 +891,16 @@ static BOOL shouldFilterMsg(CMessageWrap *wrap) {
 %end
 
 // 小程序开屏广告
-@end
 
 %hook WAAppTaskSplashADConfig
+- (bool)canShowSplashADWindow { if (pref(kAdBlockKey)) return NO; return %orig; }
 - (bool)launchShow { if (pref(kAdBlockKey)) return NO; return %orig; }
 %end
 
 // ============================================================
 // 截图转发按钮去除
 // ============================================================
+
 
 %hook MMScreenShotForwardButton
 - (void)didMoveToSuperview {
@@ -915,6 +973,10 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
 }
 
 // MMGrowTextView 圆角
+%hook MMGrowTextView
+- (void)didMoveToSuperview {
+    %orig;
+    if ([roundEnabledClasses() containsObject:NSStringFromClass(self.class)]) {
         self.layer.cornerRadius = roundRadius(NSStringFromClass(self.class));
         self.clipsToBounds = YES;
     }
@@ -922,6 +984,10 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
 %end
 
 // InputToolContainerView 圆角
+%hook InputToolContainerView
+- (void)didMoveToSuperview {
+    %orig;
+    if ([roundEnabledClasses() containsObject:NSStringFromClass(self.class)]) {
         self.layer.cornerRadius = roundRadius(NSStringFromClass(self.class));
         self.clipsToBounds = YES;
         self.layer.maskedCorners = kCALayerMinXMinYCorner | kCALayerMaxXMinYCorner;
@@ -1015,6 +1081,7 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
 // 隐藏免打扰图标
 // ============================================================
 
+
 %hook UIImageView
 - (void)didMoveToSuperview {
     %orig;
@@ -1044,6 +1111,7 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
 // ============================================================
 
 
+
 %hook _UITableViewCellSeparatorView
 - (void)didMoveToSuperview {
     %orig;
@@ -1054,6 +1122,7 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
 // ============================================================
 // 插件收纳隐藏 (UI 层过滤已注册的)
 // ============================================================
+
 
 %hook MMTableViewCell
 - (void)didMoveToSuperview {
@@ -1076,6 +1145,8 @@ static NSDictionary<NSString *, NSString *> *roundElements(void) {
 // ============================================================
 // ============================================================
 
+
+%hook WCPluginsMgr
 - (void)registerControllerWithTitle:(NSString *)title version:(NSString *)version controller:(NSString *)controller {
     addToAllPlugins(title);
     if (!isPluginBlocked(title)) %orig;
