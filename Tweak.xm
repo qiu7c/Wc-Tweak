@@ -721,7 +721,7 @@ static UIWindow *topWindow(void) {
     %orig;
     if (!pref(kAntiRevoke)) return;
     NSRange sr = [arg1.m_nsContent rangeOfString:@"<session>"];
-    if (sr.location == NSNotFound) return
+    if (sr.location == NSNotFound) return;
 
     NSUInteger s1 = sr.location + sr.length;
     NSUInteger s2 = [arg1.m_nsContent rangeOfString:@"</session>"].location;
